@@ -16,6 +16,7 @@ public class OdinEditorWindow : OdinMenuEditorWindow
     static OdinMenuTree tree = new OdinMenuTree();
     protected override OdinMenuTree BuildMenuTree()
     {
+        tree = new OdinMenuTree();
         tree.Selection.SupportsMultiSelect = false;
         tree.Add("EditorWindow", m_bake_depth_to_vertex_color_component);
         tree.Selection.SelectionChanged += OnSelectionChanged;
