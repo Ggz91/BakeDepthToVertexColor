@@ -23,10 +23,10 @@ public class BakeDepthUtil
     #endregion
 
     #region  method
-    public RenderTexture Execute(GameObject plane)
+    public RenderTexture Execute(Vector3 pos)
     {
         //设置相机
-        InitCamera(plane);
+        InitCamera(pos);
 
         //用相机渲染深度
         return RenderDepth();
@@ -68,7 +68,7 @@ public class BakeDepthUtil
         Shader.SetGlobalFloat("_DepthRangeTop", m_param.Top);
     }
 
-    void InitCamera(GameObject plane)
+    void InitCamera(Vector3 pos)
     {
         //根据plane设置相机相关参数
         m_cam.targetTexture = m_rt;
@@ -83,7 +83,7 @@ public class BakeDepthUtil
         m_cam.orthographicSize = width;
         m_cam.clearFlags = CameraClearFlags.SolidColor;
         m_cam.backgroundColor = Color.black;
-        m_cam.gameObject.transform.position = plane.transform.position + new Vector3(0, 1, 0);
+        m_cam.gameObject.transform.position = pos + new Vector3(0, 1, 0);
     }
 
     RenderTexture RenderDepth()
