@@ -29,16 +29,35 @@ public class BakeDepthToVertexColorComponent
     [Button("生成深度图")]
     public void GenDepth()
     {
+        FillParam();
         //SaveDepthTexture(m_bake_depth_util.Execute(OceanObj.transform.position));
         //分割mesh信息
         List<MeshInfo> sub_mesh_info = m_gen_mesh_util.DivideSubMesh(OceanObj, m_param);
-       
+        Mesh combined_mesh = new Mesh();
+        combined_mesh.name = "CombinedMesh";
+        List<CombineInstance> combine_instances = new List<CombineInstance>();
         for(int i=0; i<sub_mesh_info.Count; ++i)
         {
+            
             //根据mesh信息烘焙
             RenderTexture rt = m_bake_depth_util.Execute(sub_mesh_info[i].MeshPos);
             //更新定点色
             m_gen_mesh_util.MapRTToVertexColor(rt, sub_mesh_info[i], in m_param);
+
+            //把更新好的mesh全都合并成一个新的mesh，并赋值给原plane
+            CombineInstance combine_instance = new CombineInstance();
+            combine_instance.mesh = sub_mesh_info[i].Mesh;
+            combine_instance.transform = sub_mesh_info[i].Transform.localToWorldMatrix;
+            
+            combine_instances.Add(combine_instance);
+        }
+        Debug.Log(" combine sub mesh count : " + combine_instances.Count.ToString());
+        combined_mesh.CombineMeshes(combine_instances.ToArray());
+        OceanObj.GetComponent<MeshFilter>().mesh = combined_mesh;
+        //销毁掉sub mesh 的gameobject
+        foreach(var meshinfo in sub_mesh_info)
+        {
+            GameObject.DestroyImmediate(meshinfo.Transform.gameObject);
         }
     }
 
@@ -62,15 +81,18 @@ public class BakeDepthToVertexColorComponent
         }
         RenderTexture.active = before;
     }
-
-    public void Enter()
+    void FillParam()
     {
-        m_param.Size = Size;
+         m_param.Size = Size;
         m_param.UnitSize = UnitSize;
         m_param.DepthShader = DepthRenderShader;
         m_param.Bottom = Bottom;
         m_param.Top = Top;
         m_bake_depth_util.InitParam(m_param);
+    }
+    public void Enter()
+    {
+       
     }
     public void Leave()
     {
