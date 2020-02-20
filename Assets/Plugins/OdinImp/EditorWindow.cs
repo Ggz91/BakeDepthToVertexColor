@@ -18,6 +18,34 @@ public class OdinEditorWindow : OdinMenuEditorWindow
     {
         tree.Selection.SupportsMultiSelect = false;
         tree.Add("EditorWindow", m_bake_depth_to_vertex_color_component);
+        tree.Selection.SelectionChanged += OnSelectionChanged;
         return tree;
+    }
+    void OnEnterWindow()
+    {
+        if(tree.Selection.SelectedValue.GetType() == m_bake_depth_to_vertex_color_component?.GetType())
+        {
+            //进入界面
+            m_bake_depth_to_vertex_color_component.Enter();
+        }
+        else
+        {
+            m_bake_depth_to_vertex_color_component.Leave();
+        }
+    }
+    void Leave()
+    {
+        m_bake_depth_to_vertex_color_component.Leave();
+    }
+    void OnSelectionChanged(SelectionChangedType type)
+    {
+        if(type == SelectionChangedType.ItemAdded)
+        {
+            OnEnterWindow();
+        }
+    }
+    protected override void OnDestroy()
+    {
+        Leave();
     }
 }

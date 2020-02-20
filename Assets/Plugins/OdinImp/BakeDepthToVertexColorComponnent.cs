@@ -22,17 +22,11 @@ public class BakeDepthToVertexColorComponent
     public GameObject OceanObj = null;
     //public Texture2D DepthTexture = null;
     public Shader DepthRenderShader = null;
-    
+    BakeDepthUtil m_bake_depth_util = new BakeDepthUtil();
     [Button("生成深度图")]
     public void GenDepth()
     {
-        BakeDepthParam param;
-        param.Size = Size;
-        param.UnitSize = UnitSize;
-        param.DepthShader = DepthRenderShader;
-        param.Bottom = Bottom;
-        param.Top = Top;
-        SaveDepthTexture(BakeDepthUtil.BakeDepth(OceanObj, param));
+       SaveDepthTexture(m_bake_depth_util.Execute(OceanObj));
     }
     void SaveDepthTexture(RenderTexture rt)
     {
@@ -51,5 +45,20 @@ public class BakeDepthToVertexColorComponent
             filePath += "depth.png";
             File.WriteAllBytes(filePath, bytes);
         }
+    }
+
+    public void Enter()
+    {
+        BakeDepthParam param;
+        param.Size = Size;
+        param.UnitSize = UnitSize;
+        param.DepthShader = DepthRenderShader;
+        param.Bottom = Bottom;
+        param.Top = Top;
+        m_bake_depth_util.InitParam(param);
+    }
+    public void Leave()
+    {
+        m_bake_depth_util.CleanUp();
     }
 }
