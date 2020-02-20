@@ -19,6 +19,7 @@ public class OdinEditorWindow : OdinMenuEditorWindow
         tree.Selection.SupportsMultiSelect = false;
         tree.Add("EditorWindow", m_bake_depth_to_vertex_color_component);
         tree.Selection.SelectionChanged += OnSelectionChanged;
+        TrySelectMenuItemWithObject(m_bake_depth_to_vertex_color_component);
         return tree;
     }
     void OnEnterWindow()
