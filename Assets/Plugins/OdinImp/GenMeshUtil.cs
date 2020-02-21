@@ -130,14 +130,17 @@ public class GenMeshUtil
         RenderTexture.active = rt;
         tex_2d.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
         tex_2d.Apply();
-        RenderTexture.active = before;
-
+        Color[] cols = new Color[mesh_info.Mesh.vertexCount];
+        
         //更新到定点色
-        for(int i=0; i<mesh_info.Mesh.colors.Length; ++i)
+        for(int i=0; i<mesh_info.Mesh.vertexCount; ++i)
         {
             int x = Mathf.FloorToInt(mesh_info.Mesh.uv[i].x * rt.width);
             int y = Mathf.FloorToInt(mesh_info.Mesh.uv[i].y * rt.height);
-            mesh_info.Mesh.colors[i] = tex_2d.GetPixel(x, y);
+            cols[i] = tex_2d.GetPixel(x, y);
+            Debug.Log("[MapVertexColor] index : (" + x.ToString() + ", " + y.ToString() +"). Vertex Color : " + cols[i].ToString());
         }
+        mesh_info.Mesh.SetColors(cols);
+        RenderTexture.active = before;
     }
 }

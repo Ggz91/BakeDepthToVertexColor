@@ -39,10 +39,10 @@ public class BakeDepthUtil
     
     void ChangeToDepthRP(bool reset)
     {
-          //RenderWithShader在URP中被弃用了，所以下面的做法不能达到效果
+        //RenderWithShader在URP中被弃用了，所以下面的做法不能达到效果
         //m_cam.RenderWithShader(m_param.DepthShader, "RenderType");
         //使用下面的方式进行替代
-        ScriptableObject obj = AssetDatabase.LoadAssetAtPath(@"Assets/Settings/UniversalRP-LowQuality.asset", typeof(ScriptableObject)) as ScriptableObject;
+        ScriptableObject obj = AssetDatabase.LoadAssetAtPath(@"Assets/Settings/UniversalRP-HighQuality.asset", typeof(ScriptableObject)) as ScriptableObject;
         SerializedObject se_obj = new SerializedObject(obj);
         SerializedProperty pro = se_obj.FindProperty("m_DefaultRendererIndex");
         pro.intValue = reset ? 0 : 1;
@@ -60,7 +60,8 @@ public class BakeDepthUtil
             m_cam = cam_obj.GetComponent<Camera>();
         }
        
-        m_rt = RenderTexture.GetTemporary(m_param.Size.x, m_param.Size.y, 24);
+        m_rt = RenderTexture.GetTemporary(4096, 4096, 24);
+        m_rt.filterMode = FilterMode.Point;
 
         ChangeToDepthRP(false);
 
