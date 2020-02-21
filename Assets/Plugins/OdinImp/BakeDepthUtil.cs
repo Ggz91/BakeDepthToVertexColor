@@ -11,6 +11,7 @@ public struct BakeDepthParam
     public Shader DepthShader;
     public float Bottom;
     public float Top;
+    public Vector2Int RTSize;
 }
 
 public class BakeDepthUtil
@@ -60,7 +61,7 @@ public class BakeDepthUtil
             m_cam = cam_obj.GetComponent<Camera>();
         }
        
-        m_rt = RenderTexture.GetTemporary(4096, 4096, 24);
+        m_rt = RenderTexture.GetTemporary(m_param.RTSize.x, m_param.RTSize.y, 24);
         m_rt.filterMode = FilterMode.Point;
 
         ChangeToDepthRP(false);

@@ -9,11 +9,18 @@ using System.IO;
 public class BakeDepthToVertexColorComponent
 {
     [InfoBox("把深度信息映射到网格的定点色上")]
+    [BoxGroup("单位Patch")]
     [MinValue(1)]
-    public Vector2Int Size = new Vector2Int(1024, 1024);
+    public Vector2Int Size = new Vector2Int(500, 500);
 
+    [BoxGroup("单位Patch")]
     [MinValue(0.1f)]
-    public float UnitSize = 0.1f;
+    public float UnitSize = 1f;
+
+    [BoxGroup("Rendertexture参数")]
+    [MinValue(1)]
+    public Vector2Int RTSize = new Vector2Int(1024, 1024);
+
     [HorizontalGroup("深度图范围")]
     public float Bottom = -5.0f;
     [HorizontalGroup("深度图范围")]
@@ -89,6 +96,7 @@ public class BakeDepthToVertexColorComponent
         m_param.DepthShader = DepthRenderShader;
         m_param.Bottom = Bottom;
         m_param.Top = Top;
+        m_param.RTSize = RTSize;
         m_bake_depth_util.InitParam(m_param);
     }
     public void Enter()
