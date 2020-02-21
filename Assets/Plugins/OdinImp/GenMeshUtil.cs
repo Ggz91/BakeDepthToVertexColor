@@ -94,6 +94,7 @@ public class GenMeshUtil
         + ", total size : " + total_size.ToString()
         + ", unit size : " + unit_size.ToString()
         + ", total num : " + total_num.ToString());
+        Debug.Log("[GenMeshUtil] Divide Mesh Done");
         return meshes;
     }
 
@@ -142,5 +143,6 @@ public class GenMeshUtil
         }
         mesh_info.Mesh.SetColors(cols);
         RenderTexture.active = before;
+        Debug.Log("[GenMeshUtil] Map Mesh Vetex Color Done");
     }
 }

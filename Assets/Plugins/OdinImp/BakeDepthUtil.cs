@@ -26,16 +26,20 @@ public class BakeDepthUtil
     #region  method
     public RenderTexture Execute(Vector3 pos)
     {
+        Debug.Log("[BakeDepthUtil] Enter Execute.");
         //设置相机
         InitCamera(pos);
 
         //用相机渲染深度
-        return RenderDepth();
+        RenderDepth();
+        Debug.Log("[BakeDepthUtil] Execute Done.");
+        return m_rt;
     }
     public void InitParam(in BakeDepthParam param)
     {
         //设置
         Init(param);
+        Debug.Log("[BakeDepthUtil] Init Done");
     }
     
     void ChangeToDepthRP(bool reset)
@@ -89,10 +93,9 @@ public class BakeDepthUtil
         m_cam.gameObject.transform.position = pos + new Vector3(0, 1, 0);
     }
 
-    RenderTexture RenderDepth()
+    void RenderDepth()
     {
         m_cam.Render();
-        return m_rt;
     }
 
     public void CleanUp()
@@ -104,6 +107,7 @@ public class BakeDepthUtil
         m_cam = null;
         RenderTexture.ReleaseTemporary(m_rt);
         ChangeToDepthRP(true);
+        Debug.Log("[BakeDepthUtil] CleanUp Done.");
     }
     #endregion
 }

@@ -31,6 +31,7 @@ public class BakeDepthToVertexColorComponent
     public Shader DepthRenderShader = null;
     BakeDepthUtil m_bake_depth_util = new BakeDepthUtil();
     GenMeshUtil m_gen_mesh_util = new GenMeshUtil();
+    OptimizeMeshUtil m_optimize_mesh_util = new OptimizeMeshUtil();
     BakeDepthParam m_param;
     List<CombineInstance> m_combine_instances = new List<CombineInstance>();
 
@@ -60,7 +61,7 @@ public class BakeDepthToVertexColorComponent
 
     void OptimizeMesh()
     {
-
+        m_optimize_mesh_util.OptimizeMesh(OceanObj.GetComponent<MeshFilter>().sharedMesh);
     }
 
     [Button("生成深度图")]
