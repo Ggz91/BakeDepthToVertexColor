@@ -32,6 +32,36 @@ public class BakeDepthToVertexColorComponent
     BakeDepthUtil m_bake_depth_util = new BakeDepthUtil();
     GenMeshUtil m_gen_mesh_util = new GenMeshUtil();
     BakeDepthParam m_param;
+    List<CombineInstance> m_combine_instances = new List<CombineInstance>();
+
+    void AddSubMesh(MeshInfo mesh_info)
+    {
+        //把更新好的mesh全都合并成一个新的mesh，并赋值给原plane
+        CombineInstance combine_instance = new CombineInstance();
+        combine_instance.mesh = mesh_info.Mesh;
+        combine_instance.transform = mesh_info.Transform.localToWorldMatrix;
+        
+        m_combine_instances.Add(combine_instance);
+    }
+
+    void CombineMesh()
+    {
+        Mesh combined_mesh = new Mesh();
+        combined_mesh.name = "CombinedMesh";
+        Debug.Log(" combine sub mesh count : " + m_combine_instances.Count.ToString());
+        combined_mesh.CombineMeshes(m_combine_instances.ToArray());
+        OceanObj.GetComponent<MeshFilter>().mesh = combined_mesh;
+        //销毁掉sub mesh 的gameobject,都是挂在plane下面
+        while(0 < OceanObj.transform.childCount)
+        {
+            GameObject.DestroyImmediate(OceanObj.transform.GetChild(0).gameObject);
+        }
+    }
+
+    void OptimizeMesh()
+    {
+
+    }
 
     [Button("生成深度图")]
     public void GenDepth()
@@ -40,9 +70,8 @@ public class BakeDepthToVertexColorComponent
         //SaveDepthTexture(m_bake_depth_util.Execute(OceanObj.transform.position));
         //分割mesh信息
         List<MeshInfo> sub_mesh_info = m_gen_mesh_util.DivideSubMesh(OceanObj, m_param);
-        Mesh combined_mesh = new Mesh();
-        combined_mesh.name = "CombinedMesh";
-        List<CombineInstance> combine_instances = new List<CombineInstance>();
+       
+        m_combine_instances.Clear();
         for(int i=0; i<sub_mesh_info.Count; ++i)
         {
             
@@ -52,21 +81,15 @@ public class BakeDepthToVertexColorComponent
             //更新定点色
             m_gen_mesh_util.MapRTToVertexColor(rt, sub_mesh_info[i], in m_param);
 
-            //把更新好的mesh全都合并成一个新的mesh，并赋值给原plane
-            CombineInstance combine_instance = new CombineInstance();
-            combine_instance.mesh = sub_mesh_info[i].Mesh;
-            combine_instance.transform = sub_mesh_info[i].Transform.localToWorldMatrix;
-            
-            combine_instances.Add(combine_instance);
+            //添加sub mesh
+            AddSubMesh(sub_mesh_info[i]);
         }
-        Debug.Log(" combine sub mesh count : " + combine_instances.Count.ToString());
-        combined_mesh.CombineMeshes(combine_instances.ToArray());
-        OceanObj.GetComponent<MeshFilter>().mesh = combined_mesh;
-        //销毁掉sub mesh 的gameobject
-        foreach(var meshinfo in sub_mesh_info)
-        {
-            GameObject.DestroyImmediate(meshinfo.Transform.gameObject);
-        }
+
+        //合并为一个大的mesh
+        CombineMesh();
+
+        //网格优化，减少面片数和定点数
+        OptimizeMesh();
     }
 
     void SaveDepthTexture(RenderTexture rt)
