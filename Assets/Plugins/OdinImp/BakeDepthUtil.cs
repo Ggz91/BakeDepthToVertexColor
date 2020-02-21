@@ -53,6 +53,16 @@ public class BakeDepthUtil
     void Init(in BakeDepthParam param)
     {
         m_param = param;
+       
+        m_rt = RenderTexture.GetTemporary(m_param.RTSize.x, m_param.RTSize.y, 24);
+        m_rt.filterMode = FilterMode.Point;
+
+        Shader.SetGlobalFloat("_DepthRangeBottom", m_param.Bottom);
+        Shader.SetGlobalFloat("_DepthRangeTop", m_param.Top);
+    }
+    public void Enter()
+    {
+        ChangeToDepthRP(false);
 
         if(null == m_cam)
         {
@@ -60,16 +70,7 @@ public class BakeDepthUtil
             cam_obj.AddComponent<Camera>();
             m_cam = cam_obj.GetComponent<Camera>();
         }
-       
-        m_rt = RenderTexture.GetTemporary(m_param.RTSize.x, m_param.RTSize.y, 24);
-        m_rt.filterMode = FilterMode.Point;
-
-        ChangeToDepthRP(false);
-
-        Shader.SetGlobalFloat("_DepthRangeBottom", m_param.Bottom);
-        Shader.SetGlobalFloat("_DepthRangeTop", m_param.Top);
     }
-
     void InitCamera(Vector3 pos)
     {
         //根据plane设置相机相关参数

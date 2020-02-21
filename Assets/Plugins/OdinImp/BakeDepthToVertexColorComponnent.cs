@@ -48,7 +48,7 @@ public class BakeDepthToVertexColorComponent
             
             //根据mesh信息烘焙
             RenderTexture rt = m_bake_depth_util.Execute(sub_mesh_info[i].MeshPos);
-            SaveDepthTexture(rt);
+            //SaveDepthTexture(rt);
             //更新定点色
             m_gen_mesh_util.MapRTToVertexColor(rt, sub_mesh_info[i], in m_param);
 
@@ -101,7 +101,7 @@ public class BakeDepthToVertexColorComponent
     }
     public void Enter()
     {
-       
+       m_bake_depth_util.Enter();
     }
     public void Leave()
     {
