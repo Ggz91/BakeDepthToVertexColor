@@ -11,6 +11,7 @@ public struct BakeDepthParam
     public Shader DepthShader;
     public float Bottom;
     public float Top;
+    public Vector2 EdgeRange;
     public Vector2Int RTSize;
 }
 

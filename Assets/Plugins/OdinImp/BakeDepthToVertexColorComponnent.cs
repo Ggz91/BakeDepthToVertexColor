@@ -25,7 +25,8 @@ public class BakeDepthToVertexColorComponent
     public float Bottom = -5.0f;
     [HorizontalGroup("深度图范围")]
     public float Top = 5.0f;
-
+    [HorizontalGroup("深度图范围")]
+    public Vector2 EdgeRange = new Vector2(1f, -1f);
     public GameObject OceanObj = null;
     //public Texture2D DepthTexture = null;
     public Shader DepthRenderShader = null;
@@ -61,7 +62,7 @@ public class BakeDepthToVertexColorComponent
 
     void OptimizeMesh()
     {
-        m_optimize_mesh_util.OptimizeMesh(OceanObj.GetComponent<MeshFilter>().sharedMesh);
+        m_optimize_mesh_util.OptimizeMesh(OceanObj, m_param);
     }
 
     [Button("生成深度图")]
@@ -121,6 +122,7 @@ public class BakeDepthToVertexColorComponent
         m_param.Bottom = Bottom;
         m_param.Top = Top;
         m_param.RTSize = RTSize;
+        m_param.EdgeRange = EdgeRange;
         m_bake_depth_util.InitParam(m_param);
     }
     public void Enter()
