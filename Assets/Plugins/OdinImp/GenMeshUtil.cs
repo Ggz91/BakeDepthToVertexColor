@@ -20,6 +20,8 @@ public class GenMeshUtil
         List<Vector3> normals = new List<Vector3>();
         List<int> indices = new List<int>();
         Vector2Int index = Vector2Int.zero;
+        //锚点设置到中间
+        param.Size /= 2;
         for(int i=-param.Size.x; i<=param.Size.x; ++i, ++index.x)
         {
             index.y = 0;
@@ -72,8 +74,8 @@ public class GenMeshUtil
     public List<MeshInfo> DivideSubMesh(GameObject plane, BakeDepthParam param)
     {
         //根据plane的大小划分成多个不同的网格，这里要通过参数设置保证plane的大小是设置的Patch的整数倍
-        // 1单位的Scale 为 5
-        const float UnitSize = 5;
+        // 1单位的Scale 为 10，
+        const float UnitSize = 10;
         Vector2 total_size = new Vector2(0f, 0f);
         total_size.x = plane.transform.lossyScale.x * UnitSize;
         total_size.y = plane.transform.lossyScale.z * UnitSize;
