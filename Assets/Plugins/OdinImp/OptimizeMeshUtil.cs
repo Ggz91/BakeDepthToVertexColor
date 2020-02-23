@@ -45,7 +45,7 @@ public class OptimizeMeshUtil
     bool[] m_clip_arr;
 
     int m_width = 0;
-    int m_quad_tree_width = 0;
+    //int m_quad_tree_width = 0;
     int m_height = 0;
 
     Vector3[] m_vertiecs;
@@ -67,7 +67,7 @@ public class OptimizeMeshUtil
         m_clip_arr = new bool[mesh.vertexCount];
         m_width = (int)(unit_size * obj.transform.lossyScale.x / m_param.UnitSize) + 1;
         m_height = (int)(unit_size * obj.transform.lossyScale.z / m_param.UnitSize) + 1;
-        m_quad_tree_width = Mathf.NextPowerOfTwo(m_width);
+        //m_quad_tree_width = Mathf.NextPowerOfTwo(m_width);
 
         m_vertiecs = mesh.vertices;
         m_indices = new List<int>();
@@ -133,7 +133,6 @@ public class OptimizeMeshUtil
     {
         Vector2Int real_cor = new Vector2Int(index % m_width, index / m_width);
         return real_cor;
-        //return new Vector2Int(real_cor.x, real_cor.y * m_quad_tree_width);
     }
 
     int CalQuadMaxStep(int index)
@@ -296,7 +295,8 @@ public class OptimizeMeshUtil
             UpdateQuadVertices(i, real_max_step);
             GenNewQuad(i, real_max_step);
             //quad的左下角点更新了step
-            i = i + GetNextStep(i);
+            step = GetNextStep(i);
+            i = i + (0 == step ? 1 : step);
         }
     }
 

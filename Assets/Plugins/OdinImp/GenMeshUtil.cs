@@ -12,7 +12,7 @@ public struct MeshInfo
 public class GenMeshUtil
 {
 
-    Mesh GenTemplateMesh(Vector2 unit_size, BakeDepthParam param)
+    Mesh GenTemplateMesh(Vector2 unit_size, BakeDepthParam param, GameObject plane)
     {
         Mesh tmplate_mesh = new Mesh();
         List<Vector3> vertices = new List<Vector3>();
@@ -20,6 +20,7 @@ public class GenMeshUtil
         List<Vector3> normals = new List<Vector3>();
         List<int> indices = new List<int>();
         Vector2Int index = Vector2Int.zero;
+        Vector3 scale = plane.transform.lossyScale;
         //锚点设置到中间
         param.Size /= 2;
         for(int i=-param.Size.x; i<=param.Size.x; ++i, ++index.x)
@@ -28,7 +29,7 @@ public class GenMeshUtil
             for(int j=-param.Size.y; j<=param.Size.y; ++j, ++index.y)
             {
                 Vector2 offset = new Vector2(i, j) * param.UnitSize;
-                vertices.Add(new Vector3(offset.x, 0, offset.y));
+                vertices.Add(new Vector3(offset.x / scale.x , 0, offset.y / scale.z));
                 uv.Add(new Vector2(index.x * 0.5f/param.Size.x, index.y*0.5f/param.Size.y));
                 normals.Add(new Vector3(0, 1, 0));
                 Debug.Log("[GenTemplateMesh Vertex] index : " + offset.ToString() + " : " + vertices.ToArray()[vertices.Count-1].ToString());
@@ -83,13 +84,18 @@ public class GenMeshUtil
         Vector2 unit_size = new Vector2(param.Size.x * param.UnitSize, param.Size.y * param.UnitSize);
         Vector2Int total_num = new Vector2Int(Mathf.CeilToInt(total_size.x / unit_size.x), Mathf.CeilToInt(total_size.y / unit_size.y));
         List<MeshInfo> meshes = new List<MeshInfo>();
-        Mesh template_mesh = GenTemplateMesh(unit_size, param);
+        //根据原有位置和目标的圆心位置，得到一个中心平移的向量
+        Vector3 center_offset_dir = new Vector3(unit_size.x/2, 0, unit_size.y/2) - new Vector3(total_size.x/2, 0, total_size.y/2);
+        center_offset_dir.x /= plane.transform.lossyScale.x;
+        center_offset_dir.z /= plane.transform.lossyScale.z;
+        Mesh template_mesh = GenTemplateMesh(unit_size, param, plane);
         for(int i=0; i<total_num.x; ++i)
         {
             for(int j=0; j<total_num.y; ++j)
             {
-                Vector2 offset = new Vector2(i, j);
-                meshes.Add(GenSingleMeshInfo(offset, unit_size, template_mesh, plane));
+                //需要中心对称
+                Vector2 offset_index = new Vector2(i, j);
+                meshes.Add(GenSingleMeshInfo(offset_index, unit_size, template_mesh, plane, center_offset_dir));
             }
         }
         Debug.Log("[Divide Sub Mesh] lossyscale : " + plane.transform.lossyScale.ToString() 
@@ -100,15 +106,18 @@ public class GenMeshUtil
         return meshes;
     }
 
-    MeshInfo GenSingleMeshInfo(Vector2 offset, Vector2 unit_size, Mesh template_mesh, GameObject parent)
+    MeshInfo GenSingleMeshInfo(Vector2 offset_index, Vector2 unit_size, Mesh template_mesh, GameObject parent, Vector3 center_offset_dir)
     {
         GameObject mesh_obj = new GameObject();
         mesh_obj.AddComponent<MeshFilter>();
         mesh_obj.GetComponent<MeshFilter>().sharedMesh = new Mesh();
 
         MeshInfo mesh_info = new MeshInfo();
-        Vector2 imp_offset_v2 = offset * unit_size;
-        Vector3 imp_offset_v3 = new Vector3(imp_offset_v2.x, 0, imp_offset_v2.y);
+        Vector3 scale = parent.transform.lossyScale;
+        Vector2 imp_offset_v2 = offset_index * unit_size;
+        imp_offset_v2.x /= scale.x;
+        imp_offset_v2.y /= scale.z;
+        Vector3 imp_offset_v3 = parent.transform.position + new Vector3(imp_offset_v2.x, 0, imp_offset_v2.y) + center_offset_dir;
         
         mesh_info.Mesh = mesh_obj.GetComponent<MeshFilter>().sharedMesh;
         mesh_info.Mesh.SetVertices(new List<Vector3>(template_mesh.vertices));
