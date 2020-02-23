@@ -46,7 +46,7 @@ public class OptimizeMeshUtil
 
     int m_width = 0;
     int m_quad_tree_width = 0;
-    int m_heigh = 0;
+    int m_height = 0;
 
     Vector3[] m_vertiecs;
     Color[] m_colors;
@@ -65,14 +65,18 @@ public class OptimizeMeshUtil
         const float unit_size = 10;
         m_step_arr = new int[mesh.vertexCount];
         m_clip_arr = new bool[mesh.vertexCount];
-        m_width = (int)(unit_size * obj.transform.lossyScale.x / m_param.UnitSize);
-        m_heigh = (int)(unit_size * obj.transform.lossyScale.z / m_param.UnitSize);
+        m_width = (int)(unit_size * obj.transform.lossyScale.x / m_param.UnitSize) + 1;
+        m_height = (int)(unit_size * obj.transform.lossyScale.z / m_param.UnitSize) + 1;
         m_quad_tree_width = Mathf.NextPowerOfTwo(m_width);
 
         m_vertiecs = mesh.vertices;
         m_indices = mesh.GetIndices(0);
         m_uvs = mesh.uv;
         m_colors = mesh.colors;
+        Debug.Log("[OptimizeMesh-Enter] vertex count : " + m_vertiecs.Length.ToString()
+        + " uv count : " + m_uvs.Length.ToString()
+        + " indices count : " + m_indices.Length.ToString()
+        + " color count : " + m_colors.Length.ToString());
     }
 
     int GetNextStep(int i)
@@ -114,6 +118,7 @@ public class OptimizeMeshUtil
         };
         for(int i=0; i < quad_vetex_count; ++i)
         {
+            Debug.Log("[OptimizeMesh-CalMaxStep] index : " + indices[i].ToString() + " cor : " + new Vector2Int(index_x, index_y).ToString());
             if((0 == i) && (m_colors[index].r>max))
             {
                 return QuadState.EQS_Clip;
@@ -135,11 +140,17 @@ public class OptimizeMeshUtil
     {
         //根据在四叉树中的位置，来获取应该step的大小
         Vector2Int quad_cor = MapQuadTreeCor(index);
+        Debug.Log("[OptimizeMesh-CalMaxStep] vertex cor : " + quad_cor.ToString());
         int quad_size = 1;
         while(quad_size <= m_max_step)
         {
             quad_size *= 2;
             if(quad_cor.x % quad_size > 0 || quad_cor.y % quad_size > 0)
+            {
+                return quad_size / 2;
+            }
+            //不能超过当前的网格范围
+            if((quad_cor.x + quad_size) >= m_width || (quad_cor.y + quad_size) >= m_height)
             {
                 return quad_size / 2;
             }
@@ -196,14 +207,19 @@ public class OptimizeMeshUtil
         return QuadVertexUpdateType.EQVUT_NO_OP;
     }
 
-    void UpdateQuadVetices(int index, int step)
+    void UpdateQuadVertices(int index, int step)
     {
         //更新边界的step，和内部的clip
         for(int i = 0; i < step * step; ++i)
         {
             int y = i / step;
             int x = i % step;
-            int vetex_index = y * m_width + x;
+            int vetex_index = y * m_width + x + index;
+            Debug.Log("[OpitimizeMesh-UpateQuadVertices] index : " + i.ToString() 
+            + " cor : " + new Vector2Int(x, y).ToString()
+            + " vertex index : " + vetex_index.ToString()
+            + " width : " + m_width.ToString()
+            + " step : " + step.ToString());
             QuadVertexUpdateType type = CalQuadVertexType(i, step);
             if(type.HasFlag(QuadVertexUpdateType.EQVUT_CLIP))
             {
@@ -218,7 +234,8 @@ public class OptimizeMeshUtil
 
     void CombineQuad()
     {
-        for(int i=0; i<m_vertiecs.Length;)
+        //最上面一排不合并
+        for(int i=0; i<(m_vertiecs.Length - m_width);)
         {
             int step = GetNextStep(i);
             if(step > 1)
@@ -244,8 +261,9 @@ public class OptimizeMeshUtil
 
             //需要合并,因为采用四叉树，所以需要将当前的index映射成四叉树的坐标,然后根据在四叉树中的位置，判断能合并到的最大的quad
             int max_step = CalQuadMaxStep(i);
+            Debug.Log("[OptimizeMesh-CalMaxStep] index : " + i.ToString() + " max step : " + max_step.ToString());
             int real_max_step = 1;
-            for(; real_max_step <= max_step; real_max_step *= 2)
+            for(; real_max_step * 2 <= max_step; real_max_step *= 2)
             {
                 //迭代合并quad
                 if(QuadState.EQS_Normal != CheckQuadState(i,real_max_step))
@@ -256,7 +274,7 @@ public class OptimizeMeshUtil
             }
 
             //把当前quad内的顶点进行更新，包括剔除和更新step
-            UpdateQuadVetices(i, real_max_step);
+            UpdateQuadVertices(i, real_max_step);
             
             ++i;
         }
@@ -281,9 +299,10 @@ public class OptimizeMeshUtil
         for(int i=0; i<m_vertiecs.Length; ++i)
         {
             int offset = acc_clip_arr[i];
-            //移动vertices和uv
+            //移动vertices、uv和color
             m_vertiecs[i-offset] = m_vertiecs[i];
             m_uvs[i-offset] = m_uvs[i];
+            m_colors[i-offset] = m_colors[i];
 
             //indice除了挪位置，还要更新具体的值
             //先更新具体的值，再挪位置
@@ -299,22 +318,23 @@ public class OptimizeMeshUtil
         }
 
          //截断
-        List<Vector3> vertices_tmp = new List<Vector3>(m_vertiecs);
-        m_vertiecs = new Vector3[m_vertiecs.Length - acc_clip];
-        vertices_tmp.CopyTo(0, m_vertiecs, 0, m_vertiecs.Length);
-        List<Vector2> uvs_tmp = new List<Vector2>(m_uvs);
-        m_uvs = new Vector2[m_uvs.Length - acc_clip]; 
-        uvs_tmp.CopyTo(0, m_uvs, 0, m_uvs.Length);
-        List<int> indices = new List<int>(m_indices);
-        indices.CopyTo(0, m_indices, 0, 3 * m_vertiecs.Length);
+        System.Array.Resize(ref m_vertiecs, m_vertiecs.Length - acc_clip);
+        System.Array.Resize(ref m_uvs, m_vertiecs.Length);
+        System.Array.Resize(ref m_indices, 3 * m_vertiecs.Length);
+        System.Array.Resize(ref m_colors, m_vertiecs.Length);
     }
 
     void UpdateMesh(GameObject obj)
     {
+        Vector3[] normals = obj.GetComponent<MeshFilter>().sharedMesh.normals;
+        System.Array.Resize(ref normals, m_vertiecs.Length);
+        obj.GetComponent<MeshFilter>().sharedMesh = new Mesh();
         Mesh mesh = obj.GetComponent<MeshFilter>().sharedMesh;
         mesh.SetVertices(m_vertiecs);
         mesh.SetUVs(0, m_uvs);
         mesh.SetIndices(m_indices, MeshTopology.Triangles, 0);
+        mesh.SetColors(m_colors);
+        mesh.SetNormals(normals);
         mesh.RecalculateBounds();
     }
 

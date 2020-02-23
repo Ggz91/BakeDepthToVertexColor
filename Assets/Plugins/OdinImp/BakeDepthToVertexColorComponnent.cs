@@ -21,11 +21,13 @@ public class BakeDepthToVertexColorComponent
     [MinValue(1)]
     public Vector2Int RTSize = new Vector2Int(1024, 1024);
 
-    [HorizontalGroup("深度图范围")]
+    [BoxGroup("海面范围")]
     public float Bottom = -5.0f;
-    [HorizontalGroup("深度图范围")]
+
+    [BoxGroup("海面范围")]
     public float Top = 5.0f;
-    [HorizontalGroup("深度图范围")]
+
+    [BoxGroup("海面范围")]
     public Vector2 EdgeRange = new Vector2(1f, -1f);
     public GameObject OceanObj = null;
     //public Texture2D DepthTexture = null;
@@ -79,7 +81,7 @@ public class BakeDepthToVertexColorComponent
             
             //根据mesh信息烘焙
             RenderTexture rt = m_bake_depth_util.Execute(sub_mesh_info[i].MeshPos);
-            //SaveDepthTexture(rt);
+            SaveDepthTexture(rt);
             //更新定点色
             m_gen_mesh_util.MapRTToVertexColor(rt, sub_mesh_info[i], in m_param);
 
@@ -127,7 +129,8 @@ public class BakeDepthToVertexColorComponent
     }
     public void Enter()
     {
-       m_bake_depth_util.Enter();
+        Debug.ClearDeveloperConsole();
+        m_bake_depth_util.Enter();
     }
     public void Leave()
     {

@@ -25,6 +25,10 @@ public class BakeDepthUtil
     #endregion
 
     #region  method
+    void RestCam()
+    {
+        m_cam.targetTexture = null;
+    }
     public RenderTexture Execute(Vector3 pos)
     {
         Debug.Log("[BakeDepthUtil] Enter Execute.");
@@ -33,6 +37,10 @@ public class BakeDepthUtil
 
         //用相机渲染深度
         RenderDepth();
+
+        //重置相机，免得覆盖了深度图
+        RestCam();
+
         Debug.Log("[BakeDepthUtil] Execute Done.");
         return m_rt;
     }
@@ -88,7 +96,7 @@ public class BakeDepthUtil
         float height = m_param.Size.y * m_param.UnitSize;
         m_cam.aspect = height / width;
         m_cam.enabled = true;
-        m_cam.orthographicSize = width;
+        m_cam.orthographicSize = width / 2;
         m_cam.clearFlags = CameraClearFlags.SolidColor;
         m_cam.backgroundColor = Color.black;
         m_cam.gameObject.transform.position = pos + new Vector3(0, 1, 0);

@@ -7,7 +7,7 @@ using UnityEditor;
 
 public class OdinEditorWindow : OdinMenuEditorWindow
 {
-    [MenuItem("CusPlugin/OdinEditroWindow")]
+    [MenuItem("CusPlugin/OdinEditorWindow")]
     private static void ShowWindow()
     {
         GetWindow<OdinEditorWindow>().Show();
