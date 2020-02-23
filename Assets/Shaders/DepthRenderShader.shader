@@ -9,6 +9,7 @@
 
         Pass
         {
+            Blend One Zero
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag

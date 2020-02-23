@@ -8,7 +8,7 @@ public struct BakeDepthParam
 {
     public Vector2Int Size;
     public float UnitSize;
-    public Shader DepthShader;
+    //public Shader DepthShader;
     public float Bottom;
     public float Top;
     public Vector2 EdgeRange;
@@ -69,7 +69,7 @@ public class BakeDepthUtil
        
         m_rt = RenderTexture.GetTemporary(m_param.RTSize.x, m_param.RTSize.y, 24);
         m_rt.filterMode = FilterMode.Point;
-
+        
         Shader.SetGlobalFloat("_DepthRangeBottom", m_param.Bottom);
         Shader.SetGlobalFloat("_DepthRangeTop", m_param.Top);
     }
