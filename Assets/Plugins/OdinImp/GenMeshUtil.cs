@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public struct MeshInfo
+public struct PatchInfo
 {
-    public Mesh Mesh;
     public Vector3 MeshPos;
-    public Transform Transform;
+    public List<Vector2> UVs;
+    public List<int> Indices;
+
 }
 
 public class GenMeshUtil
@@ -72,30 +73,30 @@ public class GenMeshUtil
         return tmplate_mesh;
     }
 
-    public List<MeshInfo> DivideSubMesh(GameObject plane, BakeDepthParam param)
+    public List<PatchInfo> DividePatch(GameObject plane, BakeDepthParam param)
     {
         //根据plane的大小划分成多个不同的网格，这里要通过参数设置保证plane的大小是设置的Patch的整数倍
         // 1单位的Scale 为 10，
-        const float UnitSize = 10;
         Vector2 total_size = new Vector2(0f, 0f);
-        total_size.x = plane.transform.lossyScale.x * UnitSize;
-        total_size.y = plane.transform.lossyScale.z * UnitSize;
+        total_size.x = plane.transform.lossyScale.x * CommonData.UnitSize;
+        total_size.y = plane.transform.lossyScale.z * CommonData.UnitSize;
         
         Vector2 unit_size = new Vector2(param.Size.x * param.UnitSize, param.Size.y * param.UnitSize);
         Vector2Int total_num = new Vector2Int(Mathf.CeilToInt(total_size.x / unit_size.x), Mathf.CeilToInt(total_size.y / unit_size.y));
-        List<MeshInfo> meshes = new List<MeshInfo>();
+        List<PatchInfo> meshes = new List<PatchInfo>();
         //根据原有位置和目标的圆心位置，得到一个中心平移的向量
         Vector3 center_offset_dir = new Vector3(unit_size.x/2, 0, unit_size.y/2) - new Vector3(total_size.x/2, 0, total_size.y/2);
         center_offset_dir.x /= plane.transform.lossyScale.x;
         center_offset_dir.z /= plane.transform.lossyScale.z;
-        Mesh template_mesh = GenTemplateMesh(unit_size, param, plane);
+        Vector2Int patch_vertex_size = new Vector2Int(param.Size.x, param.Size.y);
+        Vector2Int total_vertex_size = new Vector2Int(Mathf.CeilToInt(total_size.x / param.UnitSize) + 1, Mathf.CeilToInt(total_size.y / param.UnitSize) + 1);
         for(int i=0; i<total_num.x; ++i)
         {
             for(int j=0; j<total_num.y; ++j)
             {
                 //需要中心对称
-                Vector2 offset_index = new Vector2(i, j);
-                meshes.Add(GenSingleMeshInfo(offset_index, unit_size, template_mesh, plane, center_offset_dir));
+                Vector2Int offset_index = new Vector2Int(i, j);
+                meshes.Add(GenPatchInfo(offset_index, unit_size, plane, center_offset_dir, patch_vertex_size, total_vertex_size));
             }
         }
         Debug.Log("[Divide Sub Mesh] lossyscale : " + plane.transform.lossyScale.ToString() 
@@ -106,35 +107,37 @@ public class GenMeshUtil
         return meshes;
     }
 
-    MeshInfo GenSingleMeshInfo(Vector2 offset_index, Vector2 unit_size, Mesh template_mesh, GameObject parent, Vector3 center_offset_dir)
+    PatchInfo GenPatchInfo(Vector2Int offset_index, Vector2 unit_size, GameObject parent, Vector3 center_offset_dir, Vector2Int patch_vertex_size, Vector2Int total_vertex_size)
     {
-        GameObject mesh_obj = new GameObject();
-        mesh_obj.AddComponent<MeshFilter>();
-        mesh_obj.GetComponent<MeshFilter>().sharedMesh = new Mesh();
-
-        MeshInfo mesh_info = new MeshInfo();
+        Mesh mesh = parent.GetComponent<MeshFilter>().sharedMesh;
+        PatchInfo mesh_info = new PatchInfo();
         Vector3 scale = parent.transform.lossyScale;
         Vector2 imp_offset_v2 = offset_index * unit_size;
         imp_offset_v2.x /= scale.x;
         imp_offset_v2.y /= scale.z;
         Vector3 imp_offset_v3 = parent.transform.position + new Vector3(imp_offset_v2.x, 0, imp_offset_v2.y) + center_offset_dir;
-        
-        mesh_info.Mesh = mesh_obj.GetComponent<MeshFilter>().sharedMesh;
-        mesh_info.Mesh.SetVertices(new List<Vector3>(template_mesh.vertices));
-        mesh_info.Mesh.SetNormals(template_mesh.normals);
-        mesh_info.Mesh.SetIndices(template_mesh.GetIndices(0), MeshTopology.Triangles, 0);
-        mesh_info.Mesh.SetUVs(0, new List<Vector2>(template_mesh.uv));
-        mesh_info.Mesh.RecalculateBounds();
-
-        mesh_obj.transform.position += imp_offset_v3;
-        
         mesh_info.MeshPos = imp_offset_v3;
-        mesh_info.Transform = mesh_obj.transform;
-        mesh_info.Transform.parent = parent.transform;
+        mesh_info.Indices = new List<int>();
+        mesh_info.UVs = new List<Vector2>();
+        Vector2Int origin_pos = new Vector2Int(offset_index.x * patch_vertex_size.x, offset_index.y * patch_vertex_size.y);
+        //把这个patch包含的顶点信息取出来
+        for(int i = 0; i <= patch_vertex_size.x; ++i)
+        {
+            for(int j = 0; j <= patch_vertex_size.y; ++j)
+            {
+                //mesh的顶点是列优先
+                int index_x = origin_pos.x + i;
+                int index_y = origin_pos.y + j;
+                int index = index_x * total_vertex_size.y + index_y;
+                mesh_info.UVs.Add(mesh.uv[index]);
+                mesh_info.Indices.Add(index);
+                Debug.Log("[GenMeshUtil] GenPatchInfo cor : " + new Vector2Int(index_x, index_y).ToString() + " index : " + index.ToString());
+            }
+        }
         return mesh_info;
     }
 
-    public void MapRTToVertexColor(RenderTexture rt, MeshInfo mesh_info, in BakeDepthParam param)
+    public void MapRTToVertexColor(RenderTexture rt, PatchInfo mesh_info, in BakeDepthParam param, Mesh mesh,Color[] cols)
     {
         //获取像素
         RenderTexture before = RenderTexture.active;
@@ -142,17 +145,16 @@ public class GenMeshUtil
         RenderTexture.active = rt;
         tex_2d.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
         tex_2d.Apply();
-        Color[] cols = new Color[mesh_info.Mesh.vertexCount];
         
         //更新到定点色
-        for(int i=0; i<mesh_info.Mesh.vertexCount; ++i)
+        for(int i=0; i<mesh_info.Indices.Count; ++i)
         {
-            int x = Mathf.FloorToInt(mesh_info.Mesh.uv[i].x * rt.width);
-            int y = Mathf.FloorToInt(mesh_info.Mesh.uv[i].y * rt.height);
-            cols[i] = tex_2d.GetPixel(x, y);
-            Debug.Log("[MapVertexColor] index : (" + x.ToString() + ", " + y.ToString() +"). Vertex Color : " + cols[i].ToString());
+            int x = Mathf.FloorToInt(mesh_info.UVs[i].x * rt.width);
+            int y = Mathf.FloorToInt(mesh_info.UVs[i].y * rt.height);
+            int index = mesh_info.Indices[i];
+            cols[index] = tex_2d.GetPixel(x, y);
+            Debug.Log("[MapVertexColor] index : (" + x.ToString() + ", " + y.ToString() +"). Vertex Color : " + cols[index].ToString());
         }
-        mesh_info.Mesh.SetColors(cols);
         RenderTexture.active = before;
         Debug.Log("[GenMeshUtil] Map Mesh Vetex Color Done");
     }
