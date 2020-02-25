@@ -13,8 +13,13 @@ public struct PatchInfo
 public class GenMeshUtil
 {
 
-    Mesh GenTemplateMesh(Vector2 unit_size, BakeDepthParam param, GameObject plane)
+    public Mesh GenMesh(Vector2 unit_size, GameObject plane)
     {
+        Vector2 total_size = new Vector2(0f, 0f);
+        total_size.x = plane.transform.lossyScale.x * CommonData.UnitSize;
+        total_size.y = plane.transform.lossyScale.z * CommonData.UnitSize;
+        
+        Vector2Int total_num = new Vector2Int(Mathf.CeilToInt(total_size.x / unit_size.x), Mathf.CeilToInt(total_size.y / unit_size.y));
         Mesh tmplate_mesh = new Mesh();
         List<Vector3> vertices = new List<Vector3>();
         List<Vector2> uv = new List<Vector2>();
@@ -23,37 +28,37 @@ public class GenMeshUtil
         Vector2Int index = Vector2Int.zero;
         Vector3 scale = plane.transform.lossyScale;
         //锚点设置到中间
-        param.Size /= 2;
-        for(int i=-param.Size.x; i<=param.Size.x; ++i, ++index.x)
+        total_num /= 2;
+        for(int i=-total_num.x; i<=total_num.x; ++i, ++index.x)
         {
             index.y = 0;
-            for(int j=-param.Size.y; j<=param.Size.y; ++j, ++index.y)
+            for(int j=-total_num.y; j<=total_num.y; ++j, ++index.y)
             {
-                Vector2 offset = new Vector2(i, j) * param.UnitSize;
+                Vector2 offset = new Vector2(i, j) * unit_size;
                 vertices.Add(new Vector3(offset.x / scale.x , 0, offset.y / scale.z));
-                uv.Add(new Vector2(index.x * 0.5f/param.Size.x, index.y*0.5f/param.Size.y));
+                uv.Add(new Vector2(index.x * 0.5f/total_num.x, index.y*0.5f/total_num.y));
                 normals.Add(new Vector3(0, 1, 0));
                 Debug.Log("[GenTemplateMesh Vertex] index : " + offset.ToString() + " : " + vertices.ToArray()[vertices.Count-1].ToString());
                 //设置三角形索引序列,顺时针生成
                 //每个定点对应左边的一个倒三角跟右边的一个正三角
-                if(param.Size.y == j)
+                if(total_num.y == j)
                 {
                     continue;
                 }
-                if(-param.Size.x != i)
+                if(-total_num.x != i)
                 {
-                    int index_0 = index.y * (2 * param.Size.x + 1)+ index.x;
-                    int index_2 = (index.y + 1) * (2 * param.Size.x + 1) + index.x - 1;
-                    int index_1 = (index.y + 1) * (2 * param.Size.x + 1) + index.x;
+                    int index_0 = index.y * (2 * total_num.x + 1)+ index.x;
+                    int index_2 = (index.y + 1) * (2 * total_num.x + 1) + index.x - 1;
+                    int index_1 = (index.y + 1) * (2 * total_num.x + 1) + index.x;
                     indices.Add(index_0);
                     indices.Add(index_1);
                     indices.Add(index_2);
                     Debug.Log("[GenTemplateMesh] index :" + index.ToString() + "  " + index_0.ToString() + " " + index_1.ToString() + " " + index_2.ToString());
                 }
-                if(param.Size.x != i)
+                if(total_num.x != i)
                 {
-                    int index_0 = index.y * (2 * param.Size.x + 1) + index.x;
-                    int index_2 = (index.y + 1) * (2 * param.Size.x + 1) + index.x;
+                    int index_0 = index.y * (2 * total_num.x + 1) + index.x;
+                    int index_2 = (index.y + 1) * (2 * total_num.x + 1) + index.x;
                     int index_1 = index_0 + 1;
                     indices.Add(index_0);
                     indices.Add(index_1);
@@ -70,10 +75,11 @@ public class GenMeshUtil
         tmplate_mesh.SetNormals(normals);
         tmplate_mesh.SetIndices(indices, MeshTopology.Triangles, 0);
         tmplate_mesh.RecalculateBounds();
+        Debug.Log("[GenMesh] vertices count : " + vertices.Count.ToString() + " indices count : " + indices.Count.ToString() + " uvs count : " + uv.Count.ToString() + " normals count : " + normals.Count.ToString());
         return tmplate_mesh;
     }
 
-    public List<PatchInfo> DividePatch(GameObject plane, BakeDepthParam param)
+    public List<PatchInfo> DividePatch(GameObject plane, BakeDepthParam param, Mesh mesh)
     {
         //根据plane的大小划分成多个不同的网格，这里要通过参数设置保证plane的大小是设置的Patch的整数倍
         // 1单位的Scale 为 10，
@@ -96,7 +102,7 @@ public class GenMeshUtil
             {
                 //需要中心对称
                 Vector2Int offset_index = new Vector2Int(i, j);
-                meshes.Add(GenPatchInfo(offset_index, unit_size, plane, center_offset_dir, patch_vertex_size, total_vertex_size));
+                meshes.Add(GenPatchInfo(offset_index, unit_size, plane, center_offset_dir, patch_vertex_size, total_vertex_size, mesh));
             }
         }
         Debug.Log("[Divide Sub Mesh] lossyscale : " + plane.transform.lossyScale.ToString() 
@@ -107,9 +113,8 @@ public class GenMeshUtil
         return meshes;
     }
 
-    PatchInfo GenPatchInfo(Vector2Int offset_index, Vector2 unit_size, GameObject parent, Vector3 center_offset_dir, Vector2Int patch_vertex_size, Vector2Int total_vertex_size)
+    PatchInfo GenPatchInfo(Vector2Int offset_index, Vector2 unit_size, GameObject parent, Vector3 center_offset_dir, Vector2Int patch_vertex_size, Vector2Int total_vertex_size, Mesh mesh)
     {
-        Mesh mesh = parent.GetComponent<MeshFilter>().sharedMesh;
         PatchInfo mesh_info = new PatchInfo();
         Vector3 scale = parent.transform.lossyScale;
         Vector2 imp_offset_v2 = offset_index * unit_size;

@@ -375,7 +375,7 @@ public class OptimizeMeshUtil
         System.Array.Resize(ref normals, m_vertiecs.Length);
         obj.GetComponent<MeshFilter>().sharedMesh = new Mesh();
         Mesh mesh = obj.GetComponent<MeshFilter>().sharedMesh;
-        mesh.name = "OptimizedCombinedMesh";
+        mesh.name = "OptimizedColoredMesh";
         mesh.SetVertices(m_vertiecs);
         mesh.SetUVs(0, m_uvs);
         mesh.SetIndices(m_indices, MeshTopology.Triangles, 0);

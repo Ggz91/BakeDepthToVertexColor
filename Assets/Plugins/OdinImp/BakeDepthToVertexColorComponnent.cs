@@ -73,7 +73,13 @@ public class BakeDepthToVertexColorComponent
         Vector2 patch_size = (Vector2)(param.Size) * param.UnitSize;
         return new Vector2Int(Mathf.CeilToInt(total_size.x / patch_size.x), Mathf.CeilToInt(total_size.y / patch_size.y));
     }
+    void SetColorerMesh(Mesh mesh, Color[] cols)
+    {
+        mesh.SetColors(cols);
+        mesh.name = "ColoredMesh";
 
+        OceanObj.GetComponent<MeshFilter>().sharedMesh = mesh;
+    }
     [Button("生成深度图")]
     public void GenDepth()
     {
@@ -81,26 +87,27 @@ public class BakeDepthToVertexColorComponent
         FillParam();
         //SaveDepthTexture(m_bake_depth_util.Execute(OceanObj.transform.position));
         //分割mesh信息
-        List<PatchInfo> sub_mesh_info = m_gen_mesh_util.DividePatch(OceanObj, m_param);
-        Mesh mesh = OceanObj.GetComponent<MeshFilter>().sharedMesh;
+        Mesh mesh = m_gen_mesh_util.GenMesh(new Vector2(m_param.UnitSize, m_param.UnitSize), OceanObj);
+        List<PatchInfo> sub_patch_info = m_gen_mesh_util.DividePatch(OceanObj, m_param, mesh);
+        
         m_combine_instances.Clear();
         Color[] cols = new Color[mesh.vertexCount];
-        for(int i=0; i<sub_mesh_info.Count; ++i)
+        for(int i=0; i<sub_patch_info.Count; ++i)
         {
             
             //根据mesh信息烘焙
-            RenderTexture rt = m_bake_depth_util.Execute(sub_mesh_info[i].MeshPos);
+            RenderTexture rt = m_bake_depth_util.Execute(sub_patch_info[i].MeshPos);
             SaveDepthTexture(rt);
             //更新定点色
-            m_gen_mesh_util.MapRTToVertexColor(rt, sub_mesh_info[i], in m_param, mesh, cols);
+            m_gen_mesh_util.MapRTToVertexColor(rt, sub_patch_info[i], in m_param, mesh, cols);
 
             //添加sub mesh
             //AddSubMesh(sub_mesh_info[i]);
         }
-        mesh.SetColors(cols);
+        
         //合并为一个大的mesh
         //CombineMesh();
-
+        SetColorerMesh(mesh, cols);
         //网格优化，减少面片数和定点数
         OptimizeMesh();
         
