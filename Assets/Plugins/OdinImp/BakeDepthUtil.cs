@@ -31,7 +31,7 @@ public class BakeDepthUtil
     }
     public RenderTexture Execute(Vector3 pos)
     {
-        Debug.Log("[BakeDepthUtil] Enter Execute.");
+        Debug.Log("[BakeDepthUtil] Enter Execute. Cam pos : ");
         //设置相机
         InitCamera(pos);
 
@@ -99,7 +99,8 @@ public class BakeDepthUtil
         m_cam.orthographicSize = width / 2;
         m_cam.clearFlags = CameraClearFlags.SolidColor;
         m_cam.backgroundColor = Color.black;
-        m_cam.gameObject.transform.position = pos + new Vector3(0, 1, 0);
+        m_cam.gameObject.transform.position = pos;
+        Debug.Log(" [BakeDepthUtil] cam pos : " + m_cam.gameObject.transform.position.ToString());
     }
 
     void RenderDepth()
