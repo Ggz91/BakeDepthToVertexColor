@@ -26,10 +26,10 @@ public class BakeDepthToVertexColorComponent
 
     [BoxGroup("深度图高度范围")]
     public float Top = 1.0f;
-    [BoxGroup("生成深度图的最高范围")]
+    [BoxGroup("生成深度图的最高高度")]
     public float SceneMaxHeight = 10f;
     [BoxGroup("海面边缘高度范围")]
-    public Vector2 EdgeRange = new Vector2(-1f, 1f);
+    public Vector2 EdgeRange = new Vector2(-0.1f, 0.2f);
     public GameObject OceanObj = null;
     //public Texture2D DepthTexture = null;
     //public Shader DepthRenderShader = null;
@@ -81,7 +81,7 @@ public class BakeDepthToVertexColorComponent
 
         OceanObj.GetComponent<MeshFilter>().sharedMesh = mesh;
     }
-    [Button("生成深度图")]
+    [Button("生成网格")]
     public void GenDepth()
     {
         //使用unity自带的网格合并，不会合并相同定点，不再划分sub mesh

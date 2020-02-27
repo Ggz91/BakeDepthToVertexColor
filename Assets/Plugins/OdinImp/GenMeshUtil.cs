@@ -136,7 +136,7 @@ public class GenMeshUtil
                 int index = index_x * total_vertex_size.y + index_y;
                 mesh_info.UVs.Add(mesh.uv[index]);
                 mesh_info.Indices.Add(index);
-                Debug.Log("[GenMeshUtil] GenPatchInfo cor : " + new Vector2Int(index_x, index_y).ToString() + " index : " + index.ToString());
+                //Debug.Log("[GenMeshUtil] GenPatchInfo cor : " + new Vector2Int(index_x, index_y).ToString() + " index : " + index.ToString());
             }
         }
         return mesh_info;
@@ -158,9 +158,9 @@ public class GenMeshUtil
             int y = Mathf.FloorToInt(mesh_info.UVs[i].y * rt.height);
             int index = mesh_info.Indices[i];
             cols[index] = tex_2d.GetPixel(x, y);
-            Debug.Log("[MapVertexColor] index : (" + x.ToString() + ", " + y.ToString() +"). Vertex Color : " + cols[index].ToString());
+            //Debug.Log("[MapVertexColor] index : (" + x.ToString() + ", " + y.ToString() +"). Vertex Color : " + cols[index].ToString());
         }
         RenderTexture.active = before;
-        Debug.Log("[GenMeshUtil] Map Mesh Vetex Color Done");
+        //Debug.Log("[GenMeshUtil] Map Mesh Vetex Color Done");
     }
 }

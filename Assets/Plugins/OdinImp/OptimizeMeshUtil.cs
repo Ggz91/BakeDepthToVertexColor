@@ -53,14 +53,16 @@ public class OptimizeMeshUtil
     List<int> m_indices;
     Vector2[] m_uvs;
     const int m_max_step = 1 << 3;
+    List<KeyValuePair<int, int>> m_quad_gen_list; 
     BakeDepthParam m_param;
-
+    float m_horizon_height;
     #endregion
 
     #region  method
     void Init(GameObject obj, BakeDepthParam param)
     {
         m_param = param;
+        m_horizon_height = obj.transform.position.y;
         Mesh mesh = obj.GetComponent<MeshFilter>().sharedMesh;
         const float unit_size = 10;
         m_step_arr = new int[mesh.vertexCount];
@@ -71,6 +73,7 @@ public class OptimizeMeshUtil
 
         m_vertiecs = mesh.vertices;
         m_indices = new List<int>();
+        m_quad_gen_list = new List<KeyValuePair<int, int>>();
         m_uvs = mesh.uv;
         m_colors = mesh.colors;
         Debug.Log("[OptimizeMesh-Enter] vertex count : " + m_vertiecs.Length.ToString()
@@ -84,7 +87,7 @@ public class OptimizeMeshUtil
         return step;
     }
 
-    QuadState CheckQuadState(int index, int step)
+    QuadState CheckQuadState(int index, int step, bool all_four_vertexes=true)
     {
         if(step > 1)
         {
@@ -102,8 +105,6 @@ public class OptimizeMeshUtil
 
         //index 设定了quad左下角的起点，step确定quad的大小
         int quad_vetex_count = 4;
-        float min = (m_param.EdgeRange.x - m_param.Bottom) / (m_param.Top - m_param.Bottom);
-        float max = (m_param.EdgeRange.y - m_param.Bottom) / (m_param.Top - m_param.Bottom);
         //起点的索引
         int index_x = index % m_width;
         int index_y = index / m_width;
@@ -115,19 +116,32 @@ public class OptimizeMeshUtil
             (index_y + step) * m_width,
             (index_y + step) * m_width + step,
         };
+        float range = m_param.Top - m_param.Bottom;
+        QuadState state = QuadState.EQS_Normal;
         for(int i=0; i < quad_vetex_count; ++i)
         {
-            Debug.Log("[OptimizeMesh-CalMaxStep] index : " + indices[i].ToString() + " cor : " + new Vector2Int(index_x, index_y).ToString());
-            if((0 == i) && (m_colors[index].r>max))
+            //Debug.Log("[OptimizeMesh-CheckQuadState] index : " + indices[i].ToString() + " cor : " + new Vector2Int(index_x, index_y).ToString());
+            float cur_height = m_colors[indices[i]].r * range + m_param.Bottom;
+            float cur_delta = cur_height - m_horizon_height;
+            Debug.Log("[OptimizeMesh-CheckQuadState Cal] index : " + indices[i].ToString()
+            + " cur_height : " + cur_height.ToString()
+            + " cur_delta : " + cur_delta.ToString());
+            if(all_four_vertexes || (0 == i))
             {
-                return QuadState.EQS_Clip;
-            }
-            if(m_colors[indices[i]].r >= min && m_colors[indices[i]].r <= max)
-            {
-                return QuadState.EQS_Dirty;
+                if((cur_delta > m_param.EdgeRange.y))
+                {
+                    state = QuadState.EQS_Clip;
+                    break;
+                }
+                if(cur_delta >= m_param.EdgeRange.x && cur_delta <= m_param.EdgeRange.y)
+                {
+                    state = QuadState.EQS_Dirty;
+                    break;
+                }
             }
         }
-        return QuadState.EQS_Normal;
+        Debug.Log("[OptimizeMesh-CheckQuadState Res] index : " + index.ToString() + " state : " + state.ToString());
+        return state;
     }
     Vector2Int MapQuadTreeCor(int index)
     {
@@ -213,13 +227,14 @@ public class OptimizeMeshUtil
             {
                 m_step_arr[vetex_index] = step;
             }
-            Debug.Log("[OptimizeMesh] updata quad vertices index : " + index.ToString()
+            /*Debug.Log("[OptimizeMesh] updata quad vertices index : " + index.ToString()
             + " step : " + step.ToString()
             + " quad index : " + i.ToString()
-            + " type : " + type.ToString());
+            + " type : " + type.ToString());*/
         }
 
     }
+    
     void GenNewQuad(int index, int step)
     {
         //以quad的左下顶点开始，生成2个逆时针拼的quad
@@ -230,11 +245,19 @@ public class OptimizeMeshUtil
             index + step * m_width,
             index + step * m_width + step,
         };
-        Debug.Log(" [OptimizeMesh] GenNewQuad index : " + index.ToString() 
+        //检查是否有clip，有clip的话，不生成这个quad
+        for(int i=0; i<indices.Length; ++i)
+        {
+            if(m_clip_arr[indices[i]])
+            {
+                return;
+            }
+        }
+        /*Debug.Log(" [OptimizeMesh] GenNewQuad index : " + index.ToString() 
         + " quad vertex index : " + indices[0].ToString()
         + " " + indices[1].ToString()
         + " " + indices[2].ToString()
-        + " " + indices[3].ToString());
+        + " " + indices[3].ToString());*/
         //第一个三角形
         m_indices.Add(indices[0]);
         m_indices.Add(indices[1]);
@@ -243,8 +266,11 @@ public class OptimizeMeshUtil
         m_indices.Add(indices[1]);
         m_indices.Add(indices[3]);
         m_indices.Add(indices[2]);
+        Debug.Log("[OptimizeMesh] GenNewQuad index : " + index.ToString()
+        + " step : " + step.ToString());
     }
-    void CombineQuad()
+
+    void GenQuadData()
     {
         //最上面一排不合并
         for(int i=0; i<(m_vertiecs.Length - m_width);)
@@ -261,7 +287,7 @@ public class OptimizeMeshUtil
                 i += step;
                 continue;
             }
-            QuadState quad_state = CheckQuadState(i, 1);        
+            QuadState quad_state = CheckQuadState(i, 1, false);        
             if(QuadState.EQS_Clip == quad_state)
             {
                 //裁剪掉了
@@ -271,7 +297,7 @@ public class OptimizeMeshUtil
             }
             else if(QuadState.EQS_Dirty == quad_state)
             {
-                GenNewQuad(i, 1);
+                RecordQuadData(i, 1);
                 //处于边缘位置，不合并
                 ++i;
                 continue;
@@ -293,11 +319,31 @@ public class OptimizeMeshUtil
 
             //把当前quad内的顶点进行更新，包括剔除和更新step
             UpdateQuadVertices(i, real_max_step);
-            GenNewQuad(i, real_max_step);
+            RecordQuadData(i, real_max_step);
             //quad的左下角点更新了step
             step = GetNextStep(i);
             i = i + (0 == step ? 1 : step);
         }
+    }
+    void RecordQuadData(int index, int step)
+    {
+        m_quad_gen_list.Add(new KeyValuePair<int, int>(index, step));
+    }
+
+    void GenQuads()
+    {
+        foreach(var data in m_quad_gen_list)
+        {
+            GenNewQuad(data.Key, data.Value);
+        }
+    }
+    void CombineQuad()
+    {
+        //更新相关数据
+        GenQuadData();
+
+        //生成quad
+        GenQuads();
     }
 
     void CompressMesh()
