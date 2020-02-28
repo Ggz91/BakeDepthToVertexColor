@@ -25,7 +25,12 @@ using UnityEngine;
 public class OptimizeMeshUtil
 {
     #region var
-
+    enum VertexState
+    {
+        EQS_Normal,     
+        EQS_Dirty,     
+        EQS_Clip,      
+    }
     enum QuadState
     {
         EQS_Normal,     //普通quad 可以合并
@@ -86,15 +91,34 @@ public class OptimizeMeshUtil
         int step = m_step_arr[i];
         return step;
     }
+    VertexState CheckSingleVertexState(int index)
+    {
+        //起点的索引
+        int index_x = index % m_width;
+        int index_y = index / m_width;
 
-    QuadState CheckQuadState(int index, int step, bool all_four_vertexes=true)
+        float range = m_param.Top - m_param.Bottom;
+        float cur_height = m_colors[index].r * range + m_param.Bottom;
+        float cur_delta = cur_height - m_horizon_height;
+
+        if((cur_delta > m_param.EdgeRange.y))
+        {
+            return VertexState.EQS_Clip;
+        }
+        if(cur_delta >= m_param.EdgeRange.x && cur_delta <= m_param.EdgeRange.y)
+        {
+            return VertexState.EQS_Dirty;
+        }
+        return VertexState.EQS_Normal;
+    }
+    QuadState CheckQuadState(int index, int step, bool affect_by_all_vertex = true)
     {
         if(step > 1)
         {
             int divide_index = index;
             for(int i = 1; i <=step * step ; i *= 2)
             {
-                QuadState quad_state = CheckQuadState(divide_index, step/2);
+                QuadState quad_state = CheckQuadState(divide_index, step/2, false);
                 if(QuadState.EQS_Normal != quad_state)
                 {
                     return quad_state;
@@ -118,6 +142,7 @@ public class OptimizeMeshUtil
         };
         float range = m_param.Top - m_param.Bottom;
         QuadState state = QuadState.EQS_Normal;
+        int clip_count = 0;
         for(int i=0; i < quad_vetex_count; ++i)
         {
             //Debug.Log("[OptimizeMesh-CheckQuadState] index : " + indices[i].ToString() + " cor : " + new Vector2Int(index_x, index_y).ToString());
@@ -126,19 +151,28 @@ public class OptimizeMeshUtil
             Debug.Log("[OptimizeMesh-CheckQuadState Cal] index : " + indices[i].ToString()
             + " cur_height : " + cur_height.ToString()
             + " cur_delta : " + cur_delta.ToString());
-            if(all_four_vertexes || (0 == i))
+            //判断clip要分情况（取step和判断顶点类型），判断dirty 4个顶点任意一个dirty即dirty
+            if((cur_delta > m_param.EdgeRange.y))
             {
-                if((cur_delta > m_param.EdgeRange.y))
+                if(affect_by_all_vertex)
+                {
+                    ++clip_count;
+                }
+                else
                 {
                     state = QuadState.EQS_Clip;
                     break;
                 }
-                if(cur_delta >= m_param.EdgeRange.x && cur_delta <= m_param.EdgeRange.y)
-                {
-                    state = QuadState.EQS_Dirty;
-                    break;
-                }
             }
+            if(cur_delta >= m_param.EdgeRange.x && cur_delta <= m_param.EdgeRange.y)
+            {
+                state = QuadState.EQS_Dirty;
+                break;
+            }
+        }
+        if(affect_by_all_vertex && quad_vetex_count == clip_count)
+        {
+            state = QuadState.EQS_Clip;
         }
         Debug.Log("[OptimizeMesh-CheckQuadState Res] index : " + index.ToString() + " state : " + state.ToString());
         return state;
@@ -269,7 +303,6 @@ public class OptimizeMeshUtil
         Debug.Log("[OptimizeMesh] GenNewQuad index : " + index.ToString()
         + " step : " + step.ToString());
     }
-
     void GenQuadData()
     {
         //最上面一排不合并
@@ -287,21 +320,7 @@ public class OptimizeMeshUtil
                 i += step;
                 continue;
             }
-            QuadState quad_state = CheckQuadState(i, 1, false);        
-            if(QuadState.EQS_Clip == quad_state)
-            {
-                //裁剪掉了
-                m_clip_arr[i] = true;
-                ++i;
-                continue;
-            }
-            else if(QuadState.EQS_Dirty == quad_state)
-            {
-                RecordQuadData(i, 1);
-                //处于边缘位置，不合并
-                ++i;
-                continue;
-            }
+            
             m_clip_arr[i] = false;
             //需要合并,因为采用四叉树，所以需要将当前的index映射成四叉树的坐标,然后根据在四叉树中的位置，判断能合并到的最大的quad
             int max_step = CalQuadMaxStep(i);
@@ -310,13 +329,23 @@ public class OptimizeMeshUtil
             for(; real_max_step * 2 <= max_step; real_max_step *= 2)
             {
                 //迭代合并quad
-                if(QuadState.EQS_Normal != CheckQuadState(i,real_max_step))
+                QuadState sub_state = CheckQuadState(i, real_max_step);
+                if(QuadState.EQS_Normal != sub_state)
                 {
                     //当前不能合并
                     break;
                 }
             }
-
+            //clip都是按照最小的size进行
+            if(1 == real_max_step)
+            {
+                if(VertexState.EQS_Clip == CheckSingleVertexState(i))
+                {
+                    m_clip_arr[i] = true;
+                    ++i;
+                    continue;
+                }
+            }
             //把当前quad内的顶点进行更新，包括剔除和更新step
             UpdateQuadVertices(i, real_max_step);
             RecordQuadData(i, real_max_step);

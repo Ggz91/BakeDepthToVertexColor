@@ -92,6 +92,9 @@ public class BakeDepthUtil
         m_cam.nearClipPlane = 0.1f;
         m_cam.farClipPlane = 1000f;
         m_cam.transform.forward = new Vector3(0, -1, 0);
+        //去掉water层
+        m_cam.cullingMask = 0xFFFF;
+        m_cam.cullingMask ^= 1 << 4; 
         float width = m_param.Size.x * m_param.UnitSize;
         float height = m_param.Size.y * m_param.UnitSize;
         m_cam.aspect = height / width;
