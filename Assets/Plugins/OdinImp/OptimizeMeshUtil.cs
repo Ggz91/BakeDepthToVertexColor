@@ -116,19 +116,18 @@ public class OptimizeMeshUtil
         if(step > 1)
         {
             int divide_index = index;
-            for(int i = 0; i < Mathf.Sqrt(step) ; ++i)
+            int size = 2;
+            for(int i = 0; i < size ; ++i)
             {
-                for(int j = 0; j < Mathf.Sqrt(step); ++j)
+                for(int j = 0; j < size; ++j)
                 {
+                    divide_index = i * step / 2 * m_height + j * step / 2 ;
                     QuadState quad_state = CheckQuadState(divide_index, step/2, false);
                     if(QuadState.EQS_Normal != quad_state)
                     {
                         return quad_state;
                     }
-                    //计算下一个定点在mesh vertices中的index
-                    divide_index = i * step / 2 * m_height + j * step / 2 ;
                 }
-             
             }
         }
 
@@ -137,20 +136,23 @@ public class OptimizeMeshUtil
         //起点的索引
         int index_x = index % m_width;
         int index_y = index / m_width;
+
         //quad 4个点的index 
         int[] indices = 
         {
             index,
             index + step,
-            (index_y + step) * m_width,
-            (index_y + step) * m_width + step,
+            (index_y + step) * m_width + index_x,
+            (index_y + step) * m_width + step + index_x,
         };
         float range = m_param.Top - m_param.Bottom;
         QuadState state = QuadState.EQS_Normal;
         int clip_count = 0;
         for(int i=0; i < quad_vetex_count; ++i)
         {
-            //Debug.Log("[OptimizeMesh-CheckQuadState] index : " + indices[i].ToString() + " cor : " + new Vector2Int(index_x, index_y).ToString());
+            Debug.Log("[OptimizeMesh-CheckQuadState] index : " + indices[i].ToString() 
+            + " cor : " + new Vector2Int(index_x, index_y).ToString()
+            + " step : " + step.ToString());
             float cur_height = m_colors[indices[i]].r * range + m_param.Bottom;
             float cur_delta = cur_height - m_horizon_height;
             Debug.Log("[OptimizeMesh-CheckQuadState Cal] index : " + indices[i].ToString()
@@ -175,7 +177,7 @@ public class OptimizeMeshUtil
                 break;
             }
         }
-        if(affect_by_all_vertex && (quad_vetex_count-1) == clip_count)
+        if(affect_by_all_vertex && quad_vetex_count == clip_count)
         {
             state = QuadState.EQS_Clip;
         }
