@@ -116,14 +116,19 @@ public class OptimizeMeshUtil
         if(step > 1)
         {
             int divide_index = index;
-            for(int i = 1; i <=step * step ; i *= 2)
+            for(int i = 0; i < Mathf.Sqrt(step) ; ++i)
             {
-                QuadState quad_state = CheckQuadState(divide_index, step/2, false);
-                if(QuadState.EQS_Normal != quad_state)
+                for(int j = 0; j < Mathf.Sqrt(step); ++j)
                 {
-                    return quad_state;
+                    QuadState quad_state = CheckQuadState(divide_index, step/2, false);
+                    if(QuadState.EQS_Normal != quad_state)
+                    {
+                        return quad_state;
+                    }
+                    //计算下一个定点在mesh vertices中的index
+                    divide_index = i * step / 2 * m_height + j * step / 2 ;
                 }
-                divide_index += step/2;
+             
             }
         }
 
@@ -170,7 +175,7 @@ public class OptimizeMeshUtil
                 break;
             }
         }
-        if(affect_by_all_vertex && quad_vetex_count == clip_count)
+        if(affect_by_all_vertex && (quad_vetex_count-1) == clip_count)
         {
             state = QuadState.EQS_Clip;
         }
@@ -247,11 +252,11 @@ public class OptimizeMeshUtil
             int y = i / step;
             int x = i % step;
             int vetex_index = y * m_width + x + index;
-            /*Debug.Log("[OpitimizeMesh-UpateQuadVertices] index : " + i.ToString() 
+            Debug.Log("[OpitimizeMesh-UpateQuadVertices] index : " + i.ToString() 
             + " cor : " + new Vector2Int(x, y).ToString()
             + " vertex index : " + vetex_index.ToString()
             + " width : " + m_width.ToString()
-            + " step : " + step.ToString());*/
+            + " step : " + step.ToString());
             QuadVertexUpdateType type = CalQuadVertexType(i, step);
             if(type.HasFlag(QuadVertexUpdateType.EQVUT_CLIP))
             {
@@ -326,25 +331,35 @@ public class OptimizeMeshUtil
             int max_step = CalQuadMaxStep(i);
             Debug.Log("[OptimizeMesh-CalMaxStep] index : " + i.ToString() + " max step : " + max_step.ToString());
             int real_max_step = 1;
-            for(; real_max_step * 2 <= max_step; real_max_step *= 2)
+            QuadState state = QuadState.EQS_Normal;
+            while(real_max_step <= max_step)
             {
                 //迭代合并quad
                 QuadState sub_state = CheckQuadState(i, real_max_step);
                 if(QuadState.EQS_Normal != sub_state)
                 {
                     //当前不能合并
+                    state = sub_state;
                     break;
                 }
+                real_max_step *= 2;
             }
+            Debug.Log("[OptimizeMeshUtil Quad State Cal Res] index : " + i.ToString()
+            + " real_max_step : " + real_max_step.ToString()
+            + " state : " + state.ToString());
             //clip都是按照最小的size进行
             if(1 == real_max_step)
             {
-                if(VertexState.EQS_Clip == CheckSingleVertexState(i))
+                if(QuadState.EQS_Clip == state)
                 {
                     m_clip_arr[i] = true;
                     ++i;
                     continue;
                 }
+            }
+            else 
+            {
+                real_max_step /= 2;
             }
             //把当前quad内的顶点进行更新，包括剔除和更新step
             UpdateQuadVertices(i, real_max_step);
