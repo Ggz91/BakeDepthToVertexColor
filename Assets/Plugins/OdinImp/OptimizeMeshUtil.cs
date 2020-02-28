@@ -354,8 +354,10 @@ public class OptimizeMeshUtil
             {
                 if(QuadState.EQS_Clip == state)
                 {
-                    m_clip_arr[i] = true;
-                    ++i;
+                    //设置的是上面两个顶点为clip
+                    m_clip_arr[i + 1] = true;
+                    m_clip_arr[i + m_width + 1] = true;
+                    i += 2;
                     continue;
                 }
             }
