@@ -71,7 +71,6 @@ public class OptimizeMeshUtil
         Mesh mesh = obj.GetComponent<MeshFilter>().sharedMesh;
         const float unit_size = 10;
         m_step_arr = new int[mesh.vertexCount];
-        m_clip_arr = new bool[mesh.vertexCount];
         m_width = (int)(unit_size * obj.transform.lossyScale.x / m_param.UnitSize) + 1;
         m_height = (int)(unit_size * obj.transform.lossyScale.z / m_param.UnitSize) + 1;
         //m_quad_tree_width = Mathf.NextPowerOfTwo(m_width);
@@ -260,10 +259,6 @@ public class OptimizeMeshUtil
             + " width : " + m_width.ToString()
             + " step : " + step.ToString());
             QuadVertexUpdateType type = CalQuadVertexType(i, step);
-            if(type.HasFlag(QuadVertexUpdateType.EQVUT_CLIP))
-            {
-                m_clip_arr[vetex_index] = true;
-            }
             if(type.HasFlag(QuadVertexUpdateType.EQVUT_STEP))
             {
                 m_step_arr[vetex_index] = step;
@@ -286,13 +281,10 @@ public class OptimizeMeshUtil
             index + step * m_width,
             index + step * m_width + step,
         };
-        //检查是否有clip，有clip的话，不生成这个quad
+        //不用clip
         for(int i=0; i<indices.Length; ++i)
         {
-            if(m_clip_arr[indices[i]])
-            {
-                return;
-            }
+           m_clip_arr[indices[i]] = false;
         }
         /*Debug.Log(" [OptimizeMesh] GenNewQuad index : " + index.ToString() 
         + " quad vertex index : " + indices[0].ToString()
@@ -328,7 +320,6 @@ public class OptimizeMeshUtil
                 continue;
             }
             
-            m_clip_arr[i] = false;
             //需要合并,因为采用四叉树，所以需要将当前的index映射成四叉树的坐标,然后根据在四叉树中的位置，判断能合并到的最大的quad
             int max_step = CalQuadMaxStep(i);
             Debug.Log("[OptimizeMesh-CalMaxStep] index : " + i.ToString() + " max step : " + max_step.ToString());
@@ -352,12 +343,9 @@ public class OptimizeMeshUtil
             //clip都是按照最小的size进行
             if(1 == real_max_step)
             {
-                if(QuadState.EQS_Clip == state)
+               if(QuadState.EQS_Clip == state)
                 {
-                    //设置的是上面两个顶点为clip
-                    m_clip_arr[i + 1] = true;
-                    m_clip_arr[i + m_width + 1] = true;
-                    i += 2;
+                    ++i;
                     continue;
                 }
             }
@@ -380,6 +368,8 @@ public class OptimizeMeshUtil
 
     void GenQuads()
     {
+        //用来记录没有用到后续压缩要clip的节点
+        m_clip_arr = new bool[m_vertiecs.Length];
         foreach(var data in m_quad_gen_list)
         {
             GenNewQuad(data.Key, data.Value);

@@ -101,11 +101,9 @@ public class BakeDepthToVertexColorComponent
             SaveDepthTexture(rt);
             //更新定点色
             m_gen_mesh_util.MapRTToVertexColor(rt, sub_patch_info[i], in m_param, mesh, cols);
-
             //添加sub mesh
             //AddSubMesh(sub_mesh_info[i]);
         }
-        
         //合并为一个大的mesh
         //CombineMesh();
         SetColorerMesh(mesh, cols);

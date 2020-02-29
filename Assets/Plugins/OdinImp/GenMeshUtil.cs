@@ -90,7 +90,10 @@ public class GenMeshUtil
         Vector2 unit_size = new Vector2(param.Size.x * param.UnitSize, param.Size.y * param.UnitSize);
         Vector2Int total_num = new Vector2Int(Mathf.CeilToInt(total_size.x / unit_size.x), Mathf.CeilToInt(total_size.y / unit_size.y));
         List<PatchInfo> meshes = new List<PatchInfo>();
-       
+        //根据原有位置和目标的圆心位置，得到一个中心平移的向量
+        Vector3 mesh_first_vertex_pos = new Vector3(unit_size.x/2, 0,unit_size.y/2) - new Vector3(total_size.x/2, 0, total_size.y/2);
+        //center_offset_dir.x /= plane.transform.lossyScale.x;
+        //center_offset_dir.z /= plane.transform.lossyScale.z;
         Vector2Int patch_vertex_size = new Vector2Int(param.Size.x, param.Size.y);
         Vector2Int total_vertex_size = new Vector2Int(Mathf.CeilToInt(total_size.x / param.UnitSize) + 1, Mathf.CeilToInt(total_size.y / param.UnitSize) + 1);
         for(int i=0; i<total_num.x; ++i)
@@ -99,7 +102,7 @@ public class GenMeshUtil
             {
                 //需要中心对称
                 Vector2Int offset_index = new Vector2Int(i, j);
-                meshes.Add(GenPatchInfo(offset_index, unit_size, plane, patch_vertex_size, total_vertex_size, mesh));
+                meshes.Add(GenPatchInfo(offset_index, unit_size, plane, mesh_first_vertex_pos,  patch_vertex_size, total_vertex_size, mesh));
             }
         }
         Debug.Log("[Divide Sub Mesh] lossyscale : " + plane.transform.lossyScale.ToString() 
@@ -110,14 +113,14 @@ public class GenMeshUtil
         return meshes;
     }
 
-    PatchInfo GenPatchInfo(Vector2Int offset_index, Vector2 unit_size, GameObject parent, Vector2Int patch_vertex_size, Vector2Int total_vertex_size, Mesh mesh)
+    PatchInfo GenPatchInfo(Vector2Int offset_index, Vector2 unit_size, GameObject parent,  Vector3 mesh_first_vertex_pos, Vector2Int patch_vertex_size, Vector2Int total_vertex_size, Mesh mesh)
     {
         PatchInfo mesh_info = new PatchInfo();
         Vector3 scale = parent.transform.lossyScale;
         Vector2 imp_offset_v2 = offset_index * unit_size;
-        imp_offset_v2.x /= scale.x;
-        imp_offset_v2.y /= scale.z;
-        Vector3 imp_offset_v3 = parent.transform.position + new Vector3(imp_offset_v2.x, 0, imp_offset_v2.y);
+        //imp_offset_v2.x /= scale.x;
+        //imp_offset_v2.y /= scale.z;
+        Vector3 imp_offset_v3 = parent.transform.position + new Vector3(imp_offset_v2.x, 0, imp_offset_v2.y) + mesh_first_vertex_pos;
         mesh_info.MeshPos = imp_offset_v3;
         mesh_info.Indices = new List<int>();
         mesh_info.UVs = new List<Vector2>();
