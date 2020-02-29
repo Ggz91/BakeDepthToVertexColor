@@ -120,7 +120,7 @@ public class OptimizeMeshUtil
             {
                 for(int j = 0; j < size; ++j)
                 {
-                    divide_index = i * step / 2 * m_height + j * step / 2 ;
+                    divide_index = i * step / 2 * m_height + j * step / 2 + index;
                     QuadState quad_state = CheckQuadState(divide_index, step/2, false);
                     if(QuadState.EQS_Normal != quad_state)
                     {
