@@ -130,7 +130,8 @@ public class GenMeshUtil
                 int index_x = origin_pos.x + i;
                 int index_y = origin_pos.y + j;
                 int index = index_x * total_vertex_size.y + index_y;
-                mesh_info.UVs.Add(mesh.uv[index]);
+                //这里不用用mesh的uv，要计算对应render texture的uv
+                mesh_info.UVs.Add(new Vector2(i * 1.0f / patch_vertex_size.x, j * 1.0f / patch_vertex_size.y));
                 mesh_info.Indices.Add(index);
                 //Debug.Log("[GenMeshUtil] GenPatchInfo cor : " + new Vector2Int(index_x, index_y).ToString() + " index : " + index.ToString());
             }
