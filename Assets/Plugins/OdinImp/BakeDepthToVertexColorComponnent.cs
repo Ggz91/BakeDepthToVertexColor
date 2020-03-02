@@ -16,6 +16,9 @@ public class BakeDepthToVertexColorComponent
     [BoxGroup("单位Patch")]
     [MinValue(0.1f)]
     public float UnitSize = 1f;
+    [BoxGroup("单位Patch")]
+    [MinValue(1)]
+    public int MaxQuadWidth = 8;
 
     [BoxGroup("Rendertexture参数")]
     [MinValue(1)]
@@ -147,6 +150,7 @@ public class BakeDepthToVertexColorComponent
         m_param.RTSize = RTSize;
         m_param.EdgeRange = EdgeRange;
         m_param.WaterLayerIndex = WaterLayerIndex;
+        m_param.MaxQuadWidth = MaxQuadWidth;
         m_bake_depth_util.InitParam(m_param);
     }
     public void Enter()

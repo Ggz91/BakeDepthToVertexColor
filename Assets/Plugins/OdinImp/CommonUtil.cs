@@ -18,4 +18,5 @@ public struct BakeDepthParam
     public Vector2 EdgeRange;
     public Vector2Int RTSize;
     public int WaterLayerIndex;
+    public int MaxQuadWidth;
 }
