@@ -131,14 +131,14 @@ public class OptimizeMeshUtil
         int clip_count = 0;
         for(int i=0; i < quad_vetex_count; ++i)
         {
-            Debug.Log("[OptimizeMesh-CheckQuadState] index : " + indices[i].ToString() 
+            /*Debug.Log("[OptimizeMesh-CheckQuadState] index : " + indices[i].ToString() 
             + " cor : " + new Vector2Int(index_x, index_y).ToString()
-            + " step : " + step.ToString());
+            + " step : " + step.ToString());*/
             float cur_height = m_colors[indices[i]].r * range + m_param.Bottom;
             float cur_delta = cur_height - m_horizon_height;
-            Debug.Log("[OptimizeMesh-CheckQuadState Cal] index : " + indices[i].ToString()
+            /*Debug.Log("[OptimizeMesh-CheckQuadState Cal] index : " + indices[i].ToString()
             + " cur_height : " + cur_height.ToString()
-            + " cur_delta : " + cur_delta.ToString());
+            + " cur_delta : " + cur_delta.ToString());*/
             //判断clip要分情况（取step和判断顶点类型），判断dirty 4个顶点任意一个dirty即dirty
             if((cur_delta > m_param.EdgeRange.y))
             {
@@ -164,7 +164,7 @@ public class OptimizeMeshUtil
         {
             state = QuadState.EQS_Clip;
         }
-        Debug.Log("[OptimizeMesh-CheckQuadState Res] index : " + index.ToString() + " state : " + state.ToString());
+        //Debug.Log("[OptimizeMesh-CheckQuadState Res] index : " + index.ToString() + " state : " + state.ToString());
         return state;
     }
     Vector2Int MapQuadTreeCor(int index)
@@ -475,6 +475,7 @@ public class OptimizeMeshUtil
 
         //把计算后的值更新给obj
         UpdateMesh(obj);
+        Debug.Log("OptimizeMeshUtil Done");
     }
     #endregion
 }
