@@ -11,7 +11,8 @@ using UnityEngine;
     进行四叉树合并；
     原始的节点均为size最小的叶子节点；
     海边的面片设置成dirty，不可进行合并；
-    非边缘的面片节点可以按照四叉树进行合并成大的面片；
+    高于海面一定距离的面片被剔除；
+    其他的面片节点可以按照四叉树进行合并成大的面片；
 
     合并的具体做法：
     0、设置一个记录当前定点取下一个定点的step值的容器，如果step大于1，表示当前的定点出于一个已经合并的quad中，直接加step到下一个定点，否则跳到1；
@@ -19,7 +20,7 @@ using UnityEngine;
     2、查找相邻的quad，判断quad是否能合并，如果能则继续这一条，不能的话转到3；
     3、更新记录step的容器，然后调到0。
     
-    为了后续减掉顶点，在合并过程中，还需要对所有减掉的定点index进行记录，等所有格子合并完成之后，对所有的顶点进行压缩挪位。
+    等所有格子合并完成之后，对所有的顶点进行压缩挪位。
     
 */
 public class OptimizeMeshUtil
@@ -90,26 +91,7 @@ public class OptimizeMeshUtil
         int step = m_step_arr[i];
         return step;
     }
-    VertexState CheckSingleVertexState(int index)
-    {
-        //起点的索引
-        int index_x = index % m_width;
-        int index_y = index / m_width;
-
-        float range = m_param.Top - m_param.Bottom;
-        float cur_height = m_colors[index].r * range + m_param.Bottom;
-        float cur_delta = cur_height - m_horizon_height;
-
-        if((cur_delta > m_param.EdgeRange.y))
-        {
-            return VertexState.EQS_Clip;
-        }
-        if(cur_delta >= m_param.EdgeRange.x && cur_delta <= m_param.EdgeRange.y)
-        {
-            return VertexState.EQS_Dirty;
-        }
-        return VertexState.EQS_Normal;
-    }
+   
     QuadState CheckQuadState(int index, int step, bool affect_by_all_vertex = true)
     {
         if(step > 1)
@@ -162,10 +144,12 @@ public class OptimizeMeshUtil
             {
                 if(affect_by_all_vertex)
                 {
+                    //判断剔除的时候要4个点都可剔除才剔除
                     ++clip_count;
                 }
                 else
                 {
+                    //判断合并的时候，有一个clip就不可合并
                     state = QuadState.EQS_Clip;
                     break;
                 }
@@ -302,6 +286,42 @@ public class OptimizeMeshUtil
         Debug.Log("[OptimizeMesh] GenNewQuad index : " + index.ToString()
         + " step : " + step.ToString());
     }
+    int CalRealStep(int i)
+    {
+        //需要合并,因为采用四叉树，所以需要将当前的index映射成四叉树的坐标,然后根据在四叉树中的位置，判断能合并到的最大的quad
+        int max_step = CalQuadMaxStep(i);
+        //Debug.Log("[OptimizeMesh-CalMaxStep] index : " + i.ToString() + " max step : " + max_step.ToString());
+        int real_max_step = 1;
+        QuadState state = QuadState.EQS_Normal;
+        while(real_max_step <= max_step)
+        {
+            //迭代合并quad
+            QuadState sub_state = CheckQuadState(i, real_max_step);
+            if(QuadState.EQS_Normal != sub_state)
+            {
+                //当前不能合并
+                state = sub_state;
+                break;
+            }
+            real_max_step *= 2;
+        }
+        /*Debug.Log("[OptimizeMeshUtil Quad State Cal Res] index : " + i.ToString()
+        + " real_max_step : " + real_max_step.ToString()
+        + " state : " + state.ToString());*/
+        //clip都是按照最小的size进行
+        if(1 == real_max_step)
+        {
+            if(QuadState.EQS_Clip == state)
+            {
+                real_max_step = -1;
+            }
+        }
+        else 
+        {
+            real_max_step /= 2;
+        }
+        return real_max_step;
+    }
     void GenQuadData()
     {
         //最上面一排不合并
@@ -320,38 +340,12 @@ public class OptimizeMeshUtil
                 continue;
             }
             
-            //需要合并,因为采用四叉树，所以需要将当前的index映射成四叉树的坐标,然后根据在四叉树中的位置，判断能合并到的最大的quad
-            int max_step = CalQuadMaxStep(i);
-            Debug.Log("[OptimizeMesh-CalMaxStep] index : " + i.ToString() + " max step : " + max_step.ToString());
-            int real_max_step = 1;
-            QuadState state = QuadState.EQS_Normal;
-            while(real_max_step <= max_step)
+            int real_max_step = CalRealStep(i);
+            if(-1 == real_max_step)
             {
-                //迭代合并quad
-                QuadState sub_state = CheckQuadState(i, real_max_step);
-                if(QuadState.EQS_Normal != sub_state)
-                {
-                    //当前不能合并
-                    state = sub_state;
-                    break;
-                }
-                real_max_step *= 2;
-            }
-            Debug.Log("[OptimizeMeshUtil Quad State Cal Res] index : " + i.ToString()
-            + " real_max_step : " + real_max_step.ToString()
-            + " state : " + state.ToString());
-            //clip都是按照最小的size进行
-            if(1 == real_max_step)
-            {
-               if(QuadState.EQS_Clip == state)
-                {
-                    ++i;
-                    continue;
-                }
-            }
-            else 
-            {
-                real_max_step /= 2;
+                //被剔除
+                ++i;
+                continue;
             }
             //把当前quad内的顶点进行更新，包括剔除和更新step
             UpdateQuadVertices(i, real_max_step);
@@ -410,7 +404,7 @@ public class OptimizeMeshUtil
         //更新indics中的值
         for(int i = 0; i < m_indices.Count; ++i)
         {
-            Debug.Log("[OptimizeMesh] update indice : " + m_indices[i].ToString());
+            //Debug.Log("[OptimizeMesh] update indice : " + m_indices[i].ToString());
             if(m_clip_arr[m_indices[i]])
             {
                 //已经被剔除了，不用更新

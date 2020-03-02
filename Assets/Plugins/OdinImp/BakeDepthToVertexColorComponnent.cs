@@ -31,6 +31,11 @@ public class BakeDepthToVertexColorComponent
     [BoxGroup("海面边缘高度范围")]
     public Vector2 EdgeRange = new Vector2(-0.1f, 0.2f);
     public GameObject OceanObj = null;
+
+    //water层
+    [MinValue(1)]
+    public int WaterLayerIndex = 4;
+
     //public Texture2D DepthTexture = null;
     //public Shader DepthRenderShader = null;
     BakeDepthUtil m_bake_depth_util = new BakeDepthUtil();
@@ -141,6 +146,7 @@ public class BakeDepthToVertexColorComponent
         m_param.Top = Top;
         m_param.RTSize = RTSize;
         m_param.EdgeRange = EdgeRange;
+        m_param.WaterLayerIndex = WaterLayerIndex;
         m_bake_depth_util.InitParam(m_param);
     }
     public void Enter()

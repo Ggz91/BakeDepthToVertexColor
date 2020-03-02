@@ -157,10 +157,10 @@ public class GenMeshUtil
             y = y >= tex_2d.height ? (y - 1) : y;
             int index = mesh_info.Indices[i];
             cols[index] = tex_2d.GetPixel(x, y);
-            Debug.Log("[MapVertexColor] index : " +  index.ToString()
+            /*Debug.Log("[MapVertexColor] index : " +  index.ToString()
             + " uv : " + mesh_info.UVs[i].ToString()
             + " cor : (" + x.ToString() + ", " + y.ToString() 
-            +"). Vertex Color : " + cols[index].ToString());
+            +"). Vertex Color : " + cols[index].ToString());*/
         }
         RenderTexture.active = before;
         Debug.Log("[GenMeshUtil] Map Mesh Vetex Color Done");

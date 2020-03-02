@@ -4,17 +4,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 
-public struct BakeDepthParam
-{
-    public Vector2Int Size;
-    public float UnitSize;
-    //public Shader DepthShader;
-    public float Bottom;
-    public float Top;
-    public Vector2 EdgeRange;
-    public Vector2Int RTSize;
-}
-
 public class BakeDepthUtil
 {
     #region var
@@ -94,7 +83,7 @@ public class BakeDepthUtil
         m_cam.transform.forward = new Vector3(0, -1, 0);
         //去掉water层
         m_cam.cullingMask = 0xFFFF;
-        m_cam.cullingMask ^= 1 << 4; 
+        m_cam.cullingMask ^= 1 << m_param.WaterLayerIndex; 
         float width = m_param.Size.x * m_param.UnitSize;
         float height = m_param.Size.y * m_param.UnitSize;
         m_cam.aspect = height / width;
