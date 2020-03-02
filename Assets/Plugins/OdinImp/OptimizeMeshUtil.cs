@@ -58,10 +58,13 @@ public class OptimizeMeshUtil
     Color[] m_colors;
     List<int> m_indices;
     Vector2[] m_uvs;
-    const int m_max_step = 1 << 3;
+    int m_max_step = 1 << 3;
     List<KeyValuePair<int, int>> m_quad_gen_list; 
     BakeDepthParam m_param;
     float m_horizon_height;
+    int[] m_list_quad_tree_max_step;
+    VertexState[] m_list_vertex_state;
+    int[] m_quad_size_loop;
     #endregion
 
     #region  method
@@ -84,6 +87,16 @@ public class OptimizeMeshUtil
         Debug.Log("[OptimizeMesh-Enter] vertex count : " + m_vertiecs.Length.ToString()
         + " uv count : " + m_uvs.Length.ToString()
         + " color count : " + m_colors.Length.ToString());
+
+        //辅助结构
+        m_max_step = Mathf.ClosestPowerOfTwo(m_param.MaxQuadWidth);
+        m_list_quad_tree_max_step = new int[mesh.vertexCount];
+        m_list_vertex_state = new VertexState[mesh.vertexCount];
+        m_quad_size_loop = new int[m_max_step];
+        for(int i=0; i<m_max_step; ++i)
+        {
+            m_quad_size_loop[i] = CalQuadMaxStep(i);
+        }
     }
 
     int GetNextStep(int i)
@@ -91,7 +104,30 @@ public class OptimizeMeshUtil
         int step = m_step_arr[i];
         return step;
     }
-   
+    int CalQuadMaxStep(int index)
+    {
+        //根据在四叉树中的位置，来获取应该step的大小
+        Vector2Int quad_cor = MapQuadTreeCor(index);
+        int quad_size = 1;
+        while(quad_size <= m_max_step)
+        {
+            quad_size *= 2;
+            if(quad_cor.x % quad_size > 0 || quad_cor.y % quad_size > 0)
+            {
+                quad_size /= 2;
+                break;
+            }
+            //不能超过当前的网格范围
+            /*if((quad_cor.x + quad_size) >= m_width || (quad_cor.y + quad_size) >= m_height)
+            {
+                quad_size /= 2;
+                break;
+            }*/
+        }
+        quad_size = quad_size > m_max_step ? m_max_step : quad_size;
+        Debug.Log("[OptimizeMesh-CalMaxStep] index :" + index.ToString() + " step : " + quad_size.ToString());
+        return quad_size;
+    }
     QuadState CheckQuadState(int index, int step, bool affect_by_all_vertex = true)
     {
         if(step > 1)
@@ -131,16 +167,9 @@ public class OptimizeMeshUtil
         int clip_count = 0;
         for(int i=0; i < quad_vetex_count; ++i)
         {
-            /*Debug.Log("[OptimizeMesh-CheckQuadState] index : " + indices[i].ToString() 
-            + " cor : " + new Vector2Int(index_x, index_y).ToString()
-            + " step : " + step.ToString());*/
-            float cur_height = m_colors[indices[i]].r * range + m_param.Bottom;
-            float cur_delta = cur_height - m_horizon_height;
-            /*Debug.Log("[OptimizeMesh-CheckQuadState Cal] index : " + indices[i].ToString()
-            + " cur_height : " + cur_height.ToString()
-            + " cur_delta : " + cur_delta.ToString());*/
-            //判断clip要分情况（取step和判断顶点类型），判断dirty 4个顶点任意一个dirty即dirty
-            if((cur_delta > m_param.EdgeRange.y))
+            Debug.Log("[OptimizeMeshUtil CheckQuadState] origin index : " + index.ToString() + " vertex index : " + indices[i].ToString() + " step : " + step.ToString());
+            VertexState vertex_state = m_list_vertex_state[indices[i]];
+            if(VertexState.EQS_Clip == vertex_state)
             {
                 if(affect_by_all_vertex)
                 {
@@ -154,7 +183,7 @@ public class OptimizeMeshUtil
                     break;
                 }
             }
-            if(cur_delta >= m_param.EdgeRange.x && cur_delta <= m_param.EdgeRange.y)
+            if(VertexState.EQS_Dirty == vertex_state)
             {
                 state = QuadState.EQS_Dirty;
                 break;
@@ -171,28 +200,6 @@ public class OptimizeMeshUtil
     {
         Vector2Int real_cor = new Vector2Int(index % m_width, index / m_width);
         return real_cor;
-    }
-
-    int CalQuadMaxStep(int index)
-    {
-        //根据在四叉树中的位置，来获取应该step的大小
-        Vector2Int quad_cor = MapQuadTreeCor(index);
-        Debug.Log("[OptimizeMesh-CalMaxStep] vertex cor : " + quad_cor.ToString());
-        int quad_size = 1;
-        while(quad_size <= m_max_step)
-        {
-            quad_size *= 2;
-            if(quad_cor.x % quad_size > 0 || quad_cor.y % quad_size > 0)
-            {
-                return quad_size / 2;
-            }
-            //不能超过当前的网格范围
-            if((quad_cor.x + quad_size) >= m_width || (quad_cor.y + quad_size) >= m_height)
-            {
-                return quad_size / 2;
-            }
-        }
-        return quad_size;
     }
 
     QuadVertexUpdateType CalQuadVertexType(int index, int step)
@@ -237,11 +244,11 @@ public class OptimizeMeshUtil
             int y = i / step;
             int x = i % step;
             int vetex_index = y * m_width + x + index;
-            Debug.Log("[OpitimizeMesh-UpateQuadVertices] index : " + i.ToString() 
+            /*Debug.Log("[OpitimizeMesh-UpateQuadVertices] index : " + i.ToString() 
             + " cor : " + new Vector2Int(x, y).ToString()
             + " vertex index : " + vetex_index.ToString()
             + " width : " + m_width.ToString()
-            + " step : " + step.ToString());
+            + " step : " + step.ToString());*/
             QuadVertexUpdateType type = CalQuadVertexType(i, step);
             if(type.HasFlag(QuadVertexUpdateType.EQVUT_STEP))
             {
@@ -289,7 +296,7 @@ public class OptimizeMeshUtil
     int CalRealStep(int i)
     {
         //需要合并,因为采用四叉树，所以需要将当前的index映射成四叉树的坐标,然后根据在四叉树中的位置，判断能合并到的最大的quad
-        int max_step = CalQuadMaxStep(i);
+        int max_step = m_list_quad_tree_max_step[i];
         //Debug.Log("[OptimizeMesh-CalMaxStep] index : " + i.ToString() + " max step : " + max_step.ToString());
         int real_max_step = 1;
         QuadState state = QuadState.EQS_Normal;
@@ -322,8 +329,50 @@ public class OptimizeMeshUtil
         }
         return real_max_step;
     }
+    void FillQuadTreeMaxStep(int i)
+    {
+        //顶点在四叉树中针对边的最大step都是一个循环，这里从一个数组中直接获取
+        int quad_tree_index = i % m_quad_size_loop.Length;
+        Vector2Int quad_cor = MapQuadTreeCor(i);
+        int quad_size = m_quad_size_loop[quad_tree_index];
+        if((quad_cor.x + quad_size) >= m_width || (quad_cor.y + quad_size) >= m_height)
+        {
+            quad_size /= 2;
+        }
+        Debug.Log("[OptimizeMeshUtil FillQuadTreeMaxStep] index : " + i.ToString() + " quad_size : " + quad_size.ToString());
+        m_list_quad_tree_max_step[i] = quad_size;
+    }
+
+    void FillVertexState(int i)
+    {
+        //更新顶点的状态
+        float range = m_param.Top - m_param.Bottom;
+        float cur_height = m_colors[i].r * range + m_param.Bottom;
+        float cur_delta = cur_height - m_horizon_height;
+        if((cur_delta > m_param.EdgeRange.y))
+        {
+            m_list_vertex_state[i] = VertexState.EQS_Clip;
+            return;
+        }
+        if(cur_delta >= m_param.EdgeRange.x && cur_delta <= m_param.EdgeRange.y)
+        {
+            m_list_vertex_state[i] = VertexState.EQS_Dirty;
+            return;
+        }
+        m_list_vertex_state[i] = VertexState.EQS_Normal;
+    }
     void GenQuadData()
     {
+
+        for(int i = 0; i < m_vertiecs.Length; ++i)
+        {
+            //更新定点的在四叉树中的位置
+            FillQuadTreeMaxStep(i);
+            //更新定点的状态
+            FillVertexState(i);
+        }
+        
+
         //最上面一排不合并
         for(int i=0; i<(m_vertiecs.Length - m_width);)
         {
@@ -464,9 +513,10 @@ public class OptimizeMeshUtil
 
     public void OptimizeMesh(GameObject obj, BakeDepthParam param)
     {
+       
         //初始化
         Init(obj, param);
-
+       
         //合并格子
         CombineQuad();
 
