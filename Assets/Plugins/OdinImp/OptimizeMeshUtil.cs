@@ -125,7 +125,7 @@ public class OptimizeMeshUtil
             }*/
         }
         quad_size = quad_size > m_max_step ? m_max_step : quad_size;
-        Debug.Log("[OptimizeMesh-CalMaxStep] index :" + index.ToString() + " step : " + quad_size.ToString());
+        //Debug.Log("[OptimizeMesh-CalMaxStep] index :" + index.ToString() + " step : " + quad_size.ToString());
         return quad_size;
     }
     QuadState CheckQuadState(int index, int step, bool affect_by_all_vertex = true)
@@ -339,7 +339,7 @@ public class OptimizeMeshUtil
         {
             quad_size /= 2;
         }
-        Debug.Log("[OptimizeMeshUtil FillQuadTreeMaxStep] index : " + i.ToString() + " quad_size : " + quad_size.ToString());
+        //Debug.Log("[OptimizeMeshUtil FillQuadTreeMaxStep] index : " + i.ToString() + " quad_size : " + quad_size.ToString());
         m_list_quad_tree_max_step[i] = quad_size;
     }
 
